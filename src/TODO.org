@@ -1,0 +1,29 @@
+
+
+* TODO
+ - [ ] move this to a self hosted kanban board
+ - [X] add a grid
+ - [ ] add actual stuff
+   - [ ] allow wires to connect to things
+   - [ ] add buttons
+   - [ ] add junctions
+   - [ ] add logic gates
+   - [ ] add regular components like LEDs and capacitors
+   - [ ] make objects stackable on each other to allow for screens
+   - [ ] allow wires to have power levels (0 - 255 maybe)
+   - [ ] make logic gates have lights to show which things are powered
+ - [ ] rotate blocks
+ - [X] make everything snap to the grid
+ - [ ] allow powering and unpowering wire
+ - [ ] add textures for things
+ - [ ] allow multi-grid-tile objects
+ - [ ] custom ICs that contain circuits
+   - [ ] specific block that acts as an input/output when part of an IC (eg block PIN-1)
+ - [ ] Block selection menu
+ - [ ] Saving and loading circuits
+   - [ ] add default circuits like 555 and 741
+ - [ ] Screens (multiclor LEDs, you have to make the screens yourself)
+ - [ ] some sort of storage capabilities like the minecraft RAM things and a more permanenent version
+ - [ ] have a consistent order every tick with how things are processed
+
+ - [ ] **IMPORTANT** make the grid real and make every grid cell with a wire contain a pointer to the wire. this will make things a lot easier
