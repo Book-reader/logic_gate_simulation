@@ -39,8 +39,8 @@ fn void World.free(&self)
   {
 	cell.free();
   }
-  grid.free();
-  data.free();
+  self.grid.free();
+  self.data.free();
 }
 
 fn Point World.world_to_grid(&self, Point world_coords)
@@ -51,6 +51,33 @@ fn Point World.world_to_grid(&self, Point world_coords)
 fn Point World.grid_to_world(&self, Point grid_coords)
 {
   return grid_coords * self.scale;
+}
+
+struct Component
+{
+  ComponentType type;
+  ComponentData data;
+}
+
+fn void Component.power(&self)
+{
+  switch (self.type)
+  {
+	case WIRE:
+	default:
+  }
+}
+
+enum ComponentType
+{
+  WIRE,
+  BUTTON,
+}
+
+union ComponentData
+{
+  Button as_button;
+  Wire as_wire;
 }
 
 struct Wire

@@ -72,6 +72,7 @@ fn int main(String[] args)
 
   World world;
   world.new_init();
+  defer world.free();
 
   char flipped;
 
