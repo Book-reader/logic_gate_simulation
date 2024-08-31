@@ -74,29 +74,14 @@ fn int main(String[] args)
   world.new_init();
   defer world.free();
 
-  char flipped;
-
-  bool dragging;
-
-  Point mouse_pos;
-  Point mouse_grid_pos;
+  char pressing;
+  Component temp_wire = {};
+  Component* current_wire = &temp_wire;
   Point start_point;
 
-  List(<Wire>) wires;
-  wires.new_init();
-  defer
-  {
-	foreach (wire : wires)
-	{
-	  wire.free();
-	}
-	wires.free();
-  }
-
-  HashMap(<Point, Button>) buttons;
-  buttons.new_init();
-  defer buttons.free();
-
+  
+  Point mouse_pos;
+  Point mouse_grid_pos;
   
   while (running)
   {
@@ -122,59 +107,44 @@ fn int main(String[] args)
 		case event_type::MOUSEBUTTONDOWN:
 		  if (event.button.button == sdl2::mouse::BUTTON_LEFT)
 		  {
-			if (buttons.has_key(mouse_grid_pos))
-			{
-			  io::printn("button pressed!");
-			  if (start_point != {})
-			  {
-				Point corner = get_corner_between_points(start_point, mouse_grid_pos);
-				if (corner != mouse_grid_pos)
-				{
-				  wires.get_ref(wires.len() - 1).points.push(corner);
-				}
-				wires.get_ref(wires.len() - 1).points.push(mouse_grid_pos);
-				List(<Point>) points = get_wire_points(&&wires.last()!!);
-				defer points.free();
-				wires.get_ref(wires.len() - 1).points.pop()!!;
-				points.pop()!!;
-				wires.get_ref(wires.len() - 1).points.push(points.pop()!!);
-				// buttons.get(mouse_grid_pos);
-				// TODO: connect the wire to the button
-				start_point = {};
-			  }
-			}
-			else if (start_point == {})
-			{
-			  Wire wire;
-			  wire.new_init();
-			  start_point = mouse_grid_pos;
-			  wire.points.push(start_point);
-			  wires.push(wire);
-			}
-			else
-			{
-			  if (wires.get_ref(wires.len() - 1).points.last()!! == mouse_grid_pos) break;
-			  Point corner = get_corner_between_points(start_point, mouse_grid_pos);
-			  if (corner != mouse_grid_pos)
-			  {
-				wires.get_ref(wires.len() - 1).points.push(corner);
-			  }
-			  wires.get_ref(wires.len() - 1).points.push(mouse_grid_pos);
-			  start_point = mouse_grid_pos;
-			}
-
-			flipped = flipped | (char)(1 << 0x01);
+			pressing = pressing | (char)(1 << 0x01);
 			io::printfn("Pressed left mouse at %s, %s, grid %s, %s", mouse_pos.x, mouse_pos.y, mouse_grid_pos.x, mouse_grid_pos.y);
+
+			if (current_wire.equals({}) && start_point == {})
+			{
+			  temp_wire = {WIRE, {}};
+			  current_wire = &temp_wire;
+			  io::printn("a");
+			  start_point = mouse_grid_pos;
+			}
+			else if (!current_wire.equals({}) && start_point != {})
+			{
+			  if (world.data.get_ref(world.data.len() - 1) != current_wire)
+			  {
+				world.data.push(temp_wire);
+				temp_wire = {};
+				current_wire = world.data.get_ref(world.data.len() - 1);
+			  }
+			  List(<Point>) points = get_wire_points(start_point, mouse_grid_pos);
+			  defer points.free();
+			  foreach (cell : points)
+			  {
+				world.set_at(cell, current_wire);
+			  }
+			  start_point = mouse_grid_pos;
+			}
 		  }
 		  else if (event.button.button == sdl2::mouse::BUTTON_RIGHT)
 		  {
-			if (wires.last()!!.points.len() == 1) wires.pop()!!;
+			// if (wires.last()!!.points.len() == 1) wires.pop()!!;
 			start_point = {};
-		  }
+			temp_wire = {};
+			current_wire = &temp_wire;
+		   }
 		case event_type::MOUSEBUTTONUP:
 		  if (event.button.button == sdl2::mouse::BUTTON_LEFT)
 		  {
-			flipped = flipped & (char)~(1 << 0x01);
+			pressing = pressing & (char)~(1 << 0x01);
 			io::printfn("Released left mouse at %s, %s", mouse_pos.x, mouse_pos.y);
 		  }
 
@@ -182,7 +152,7 @@ fn int main(String[] args)
 		  mouse_pos = {event.button.x, event.button.y};
 		  mouse_grid_pos = world.world_to_grid(mouse_pos);
 
-		  if (flipped & (char)(1 << 0x01) != 0)
+		  if (pressing & (char)(1 << 0x01) != 0)
 		  {
 			io::printfn("dragged left mouse!");
 		  }
@@ -210,10 +180,10 @@ fn int main(String[] args)
 		case scancode::S:
 		  pos.y += 2;
 		case scancode::SPACE:
-		  if (!buttons.has_key(mouse_grid_pos))
-		  {
-			buttons.set(mouse_grid_pos, {mouse_grid_pos, false, null, null, null, null});
-		  }
+		  // if (!buttons.has_key(mouse_grid_pos))
+		  // {
+		  // 	buttons.set(mouse_grid_pos, {mouse_grid_pos, false, null, null, null, null});
+		  // }
 	  }
 	}	  
 	
@@ -234,35 +204,58 @@ fn int main(String[] args)
 	sdl2::set_draw_color(renderer, 0xff, 0x00, 0x00, 0xff);
 	sdl2::fill_rect(renderer, &&Rectangle {pos.x, pos.y, 50, 50});
 
-	foreach (i, wire : wires)
+	// foreach (i, wire : wires)
+	// {
+	//   if (wire.powered)
+	//   {
+	// 	sdl2::set_draw_color(renderer, 0xff, 0x00, 0x00, 0xff);
+	//   }
+	//   else
+	//   {
+	// 	sdl2::set_draw_color(renderer, 0xaf, 0x00, 0x00, 0xff);
+	//   }
+	//   for (usz j = 1; j < wire.points.len(); j++)
+	//   {
+	// 	draw_between_grid_points(renderer, world, wire.points[j -1], wire.points[j]);
+	//   }
+	//   if (start_point != {} && i == wires.len() - 1)
+	//   {
+	// 	Point corner = get_corner_between_points(wire.points.last()!!, mouse_grid_pos);
+	// 	draw_between_grid_points(renderer, world, wire.points.last()!!, corner);
+	// 	draw_between_grid_points(renderer, world, corner, mouse_grid_pos);
+	//   }
+	// }
+	if (start_point != {} && !current_wire.equals({}))
 	{
-	  if (wire.powered)
+	  Point corner = get_corner_between_points(start_point, mouse_grid_pos);
+	  draw_between_grid_points(renderer, world, start_point, corner);
+	  draw_between_grid_points(renderer, world, corner, mouse_grid_pos);
+	}
+
+	Component a = {WIRE, {}};
+	world.set_at({3, 3}, &a);
+	sdl2::set_draw_color(renderer, 0xff, 0x00, 0x00, 0xff);
+	foreach (x, row : world.grid)
+	{
+	  foreach (y, cell : row)
 	  {
-		sdl2::set_draw_color(renderer, 0xff, 0x00, 0x00, 0xff);
-	  }
-	  else
-	  {
-		sdl2::set_draw_color(renderer, 0xaf, 0x00, 0x00, 0xff);
-	  }
-	  for (usz j = 1; j < wire.points.len(); j++)
-	  {
-		draw_between_grid_points(renderer, world, wire.points[j -1], wire.points[j]);
-	  }
-	  if (start_point != {} && i == wires.len() - 1)
-	  {
-		Point corner = get_corner_between_points(wire.points.last()!!, mouse_grid_pos);
-		draw_between_grid_points(renderer, world, wire.points.last()!!, corner);
-		draw_between_grid_points(renderer, world, corner, mouse_grid_pos);
+		switch (cell.type)
+		{
+		  case WIRE:
+			sdl2::fill_rect(renderer, &&Rectangle {world.grid_to_world({(int)x, 0}).x, world.grid_to_world({0, (int)y}).y, world.scale, world.scale});
+		  default:
+		}
 	  }
 	}
 
-	sdl2::set_draw_color(renderer, 0x00, 0xff, 0x00, 0xff);
-	foreach (button_pos : buttons.key_tlist())
-	{
-	  Button button = buttons.get(button_pos)!!;
-	  Button temp = {world.grid_to_world(button_pos), button.enabled, button.top, button.bottom, button.left, button.right};
-	  sdl2::fill_rect(renderer, &&Rectangle {temp.position.x, temp.position.y, world.scale, world.scale}); 
-	}
+
+	// sdl2::set_draw_color(renderer, 0x00, 0xff, 0x00, 0xff);
+	// foreach (button_pos : buttons.key_tlist())
+	// {
+	//   Button button = buttons.get(button_pos)!!;
+	//   Button temp = {world.grid_to_world(button_pos), button.enabled, button.top, button.bottom, button.left, button.right};
+	//   sdl2::fill_rect(renderer, &&Rectangle {temp.position.x, temp.position.y, world.scale, world.scale}); 
+	// }
 	
 	/*
 	 *
@@ -306,32 +299,32 @@ fn Point get_corner_between_points(Point start, Point end)
   return end;
 }
 
-fn List(<Point>) get_wire_points(Wire* wire)
+fn List(<Point>) get_wire_points(Point start, Point end)
 {
   List(<Point>) points;
   points.new_init();
 
-  for (usz i = 1; i < wire.points.len(); i++)
+  // for (usz i = 1; i < wire.points.len(); i++)
+  // {
+  // Point start = wire.points[i - 1];
+  // Point end = wire.points[i];
+  Point curr = start;
+
+  while (curr.x != end.x)
   {
-	Point start = wire.points[i - 1];
-	Point end = wire.points[i];
-	Point curr = start;
+	if (curr.x > end.x) curr.x --;
+	if (curr.x < end.x) curr.x ++;
 
-	while (curr.x != end.x)
-	{
-	  if (curr.x > end.x) curr.x --;
-	  if (curr.x < end.x) curr.x ++;
-
-	  points.push(curr);
-	}
-	while (curr.y != end.y)
-	{
-	  if (curr.y > end.y) curr.y --;
-	  if (curr.y < end.y) curr.y ++;
-
-	  points.push(curr);
-	}
+	points.push(curr);
   }
+  while (curr.y != end.y)
+  {
+	if (curr.y > end.y) curr.y --;
+	if (curr.y < end.y) curr.y ++;
+
+	points.push(curr);
+  }
+  // }
 
   return points;
 }
