@@ -59,7 +59,7 @@ fn Point World.grid_to_world(&self, Point grid_coords)
 
 fn Component* World.get_at(&self, Point pos)
 {
-  return (self.grid.len() < pos.x || self.grid[pos.x].len() < pos.y) ? null : self.grid[pos.x][pos.y];
+  return (pos.x >= self.grid.len() || pos.y >= self.grid[pos.x].len()) ? &null_component : self.grid[pos.x][pos.y];
 }
 
 fn void World.set_at(&self, Point pos, Component* com)
@@ -79,6 +79,12 @@ fn void World.set_at(&self, Point pos, Component* com)
 	self.grid[pos.x].push(&null_component);
   }
   self.grid.get(pos.x).set(pos.y, com);
+}
+
+// Add last_ref function to the world grid
+fn Component* List(<Component>).last_ref(&self)
+{
+  return &self.entries[self.size -1];
 }
 
 struct Component

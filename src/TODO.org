@@ -13,6 +13,7 @@
    - [ ] allow wires to have power levels (0 - 255 maybe)
    - [ ] make logic gates have lights to show which things are powered
  - [ ] rotate blocks
+ - [X] delete stuff
  - [X] make everything snap to the grid
  - [ ] allow powering and unpowering wire
  - [ ] add textures for things
@@ -26,4 +27,4 @@
  - [ ] some sort of storage capabilities like the minecraft RAM things and a more permanenent version
  - [ ] have a consistent order every tick with how things are processed
 
- - [ ] **IMPORTANT** make the grid real and make every grid cell with a wire contain a pointer to the wire. this will make things a lot easier
+ - [X] **IMPORTANT** make the grid real and make every grid cell with a wire contain a pointer to the wire. this will make things a lot easier
