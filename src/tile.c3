@@ -20,7 +20,7 @@ struct World
 
   int scale;
 
-  List(<List(<Component*>)>) grid;
+  List(<List(<usz>)>) grid;
   List(<Component>) data;
 }
 
@@ -33,6 +33,8 @@ fn void World.new_init(&self)
 
   self.grid.new_init();
   self.data.new_init();
+  // self.data[0] is null
+  self.data.push({NULL, {}});
 }
 
 fn void World.free(&self)
@@ -47,22 +49,17 @@ fn void World.free(&self)
 
 Component null_component = {NULL, {}};
 
-fn Point World.world_to_grid(&self, Point world_coords)
-{
-  return world_coords / self.scale;
-}
+fn Point World.world_to_grid(&self, Point world_coords) => world_coords / self.scale;
 
-fn Point World.grid_to_world(&self, Point grid_coords)
-{
-  return grid_coords * self.scale;
-}
+fn Point World.grid_to_world(&self, Point grid_coords) => grid_coords * self.scale;
 
-fn Component* World.get_at(&self, Point pos)
-{
-  return (pos.x >= self.grid.len() || pos.y >= self.grid[pos.x].len()) ? &null_component : self.grid[pos.x][pos.y];
-}
+fn Component* World.get(&self, usz idx) => self.data.len() <= idx ? &null_component : &self.data[idx];
 
-fn void World.set_at(&self, Point pos, Component* com)
+fn Component* World.get_at(&self, Point pos) => (pos.x >= self.grid.len() || pos.y >= self.grid[pos.x].len()) ? &null_component : &self.data[self.grid[pos.x][pos.y]];
+
+fn usz World.get_idx_at(&self, Point pos) => (pos.x >= self.grid.len() || pos.y >= self.grid[pos.x].len()) ? 0 : self.grid[pos.x][pos.y];
+
+fn void World.set_at(&self, Point pos, usz idx)
 {
   usz orig_len = self.grid.len();
   if (pos.x >= orig_len)
@@ -70,22 +67,60 @@ fn void World.set_at(&self, Point pos, Component* com)
 	for (usz i = orig_len; i <= pos.x; i++)
 	{
 	  io::printfn("n: %s", i);
-	  List(<Component*>) a;
+	  List(<usz>) a;
 	  a.new_init();
 	  self.grid.push(a);
 	}
   }
   while (pos.y >= self.grid[pos.x].len()) {
-	self.grid[pos.x].push(&null_component);
+	self.grid[pos.x].push(0);
   }
-  self.grid.get(pos.x).set(pos.y, com);
+  self.grid.get(pos.x).set(pos.y, idx);
 }
 
-// Add last_ref function to the world grid
-fn Component* List(<Component>).last_ref(&self)
+// This cleans deleted data from the data list
+// perhaps you could say it is a garbage collector >:)
+// Should run every x seconds or after x deletions
+fn void World.clean_null(&self)
 {
-  return &self.entries[self.size -1];
+  List(<usz>) idx_to_remove;
+  idx_to_remove.new_init();
+  defer idx_to_remove.free();
+  for (int i = 1; i < self.data.len(); i++)
+  {
+	Component data = self.data[i];
+	if (equals(data, Component {NULL, {}}))
+	{
+	  idx_to_remove.push(i);
+	}
+  }
+  for (isz i = idx_to_remove.len() - 1; i >= 0; i--)
+  {
+	usz idx = idx_to_remove[i];
+	foreach (row : self.grid)
+	{
+	  foreach (&cell : row)
+	  {
+		if (*cell == idx)
+		{
+		  *cell = 0;
+		}
+		else if (*cell > idx)
+		{
+		  (*cell) --;
+		}
+	  }
+	}
+	self.data.remove_at(idx);
+  }
 }
+
+
+// TODO: automatic incrementing then every 100 or so run clean_null()
+fn void World.remove(&self, usz idx) => self.data.set(idx, {NULL, {}});
+
+// Add last_idx function to the world data
+fn usz List(<Component>).last_idx(&self) => self.len() - 1;
 
 struct Component
 {
@@ -107,7 +142,7 @@ fn void Component.power(&self)
 // This compares if the components are the same in memo
 fn bool Component.equals(&self, Component other)
 {
-  return self.type == other.type && self.data.equals(other.data);
+  return @generic_equals(Component, self, other);
 }
 
 
@@ -116,6 +151,7 @@ enum ComponentType
   NULL,
   WIRE,
   BUTTON,
+  SWITCH,
 }
 
 union ComponentData
@@ -126,11 +162,7 @@ union ComponentData
 
 fn bool ComponentData.equals(&self, ComponentData other)
 {
-  //   $foreach ($member : ComponentData.membersof)
-  // 	if (self.$member != other.$member) return false;
-  // $endforeach
-  // return true;
-  return self.as_button.equals(other.as_button) && self.as_wire.equals(other.as_wire);
+  return @generic_equals(ComponentData, self, other);
 }
 
 struct Wire
@@ -140,14 +172,7 @@ struct Wire
 
 fn bool Wire.equals(&self, Wire other)
 {
-  // String $a = "powered";
-  // // $foreach ($member : $a)
-  // 	// $if ($member):
-  // if (self.$a != other.$a) return false;
-  // 	// $endif
-  // // $endforeach
-  // return true;
-  return self.powered == other.powered;
+  return @generic_equals(Wire, self, other);
 }
 
 struct Button
@@ -158,11 +183,7 @@ struct Button
 // FIXME all of these .equals functions break 
 fn bool Button.equals(&self, Button other)
 {
-  // $foreach ($member : Button.membersof)
-  // 	if (self.$member != other.$member) return false;
-  // $endforeach
-  // return true;
-  return self.enabled == other.enabled;
+  return @generic_equals(Button, self, other);
 }
 
 
@@ -171,9 +192,10 @@ fn void Button.push(&self, Point position)
   // TODO
 }
 
-// fn bool Button.equals(&self, Button other)
-// {
-//   // The buttons should never overlap
-//   // return self.position == other.position;
-//   return false;
-// }
+macro bool @generic_equals($Type, self, other) @local
+{
+  $foreach ($member : $Type.membersof)
+	if (!equals($member.get(*self), $member.get(other))) return false;
+  $endforeach
+  return true;
+}

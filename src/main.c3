@@ -26,6 +26,13 @@ fn int main(String[] args)
   }
   defer sdl2::quit();
 
+  if (sdl2::ttf_init() < 0)
+  {
+	io::printfn("Failed to init SDL_ttf: %s", sdl2::get_error());
+	return 1;
+  }
+  defer sdl2::ttf_quit();
+
   /*
    *
    * Initialize the main window
@@ -76,7 +83,8 @@ fn int main(String[] args)
 
   char pressing;
   Component temp_wire = {};
-  Component* current_wire = &temp_wire;
+  // The index of the world data. 0 is null_data
+  usz current_wire = 0;
   Point start_point;
 
   
@@ -110,27 +118,56 @@ fn int main(String[] args)
 			pressing = pressing | (char)(1 << 0x01);
 			io::printfn("Pressed left mouse at %s, %s, grid %s, %s", mouse_pos.x, mouse_pos.y, mouse_grid_pos.x, mouse_grid_pos.y);
 
-			if (current_wire.equals({}) && start_point == {})
+			if (world.get_at(mouse_grid_pos).type == BUTTON)
+			{
+			  if (current_wire != 0 && start_point != {})
+			  {
+				List(<Point>) points = get_wire_points(start_point, mouse_grid_pos);
+				defer points.free();
+				points.remove_last()!!;
+				foreach (cell : points)
+				{
+				  world.set_at(cell, current_wire);
+				}
+				
+				start_point = {};
+				temp_wire = {};
+				current_wire = 0;
+			  }
+			  world.get_at(mouse_grid_pos).data.as_button.enabled = true;
+			  // TODO: have an active_button and active_button_pos that stores this value.
+			  // when the button is no longer pressed active_button_not should be set to true and it should do the opposite
+			  if (world.get_at(mouse_grid_pos + {0, 1}).type == WIRE)
+			  {
+				world.get_at(mouse_grid_pos + {0, 1}).data.as_wire.powered = true;
+			  }
+			}
+			else if (current_wire == 0 && start_point == {})
 			{
 			  temp_wire = {WIRE, {}};
-			  current_wire = &temp_wire;
+			  current_wire = world.data.len();
 			  io::printn("a");
 			  start_point = mouse_grid_pos;
 			}
-			else if (!current_wire.equals({}) && start_point != {})
+			else if (current_wire != 0 && start_point != {})
 			{
-			  if (world.data.last_ref() != current_wire)
+			  if (world.data.last_idx() != current_wire)
 			  {
 				world.data.push(temp_wire);
 				temp_wire = {};
-				current_wire = world.data.last_ref();
+				current_wire = world.data.last_idx();
 			  }
 			  List(<Point>) points = get_wire_points(start_point, mouse_grid_pos);
 			  defer points.free();
 			  bool do_ = true;
 			  foreach (cell : points)
 			  {
-				if (world.get_at(cell).type != NULL) do_ = false;
+				if (world.get_at(cell).type != NULL && world.get_idx_at(cell) != current_wire)
+				{
+				  do_ = false;
+				  io::printfn("Tried to place wire but found: %s", world.get_at(cell).type);
+				  break;
+				}
 			  }
 			  if (do_)
 			  {
@@ -146,7 +183,7 @@ fn int main(String[] args)
 		  {
 			start_point = {};
 			temp_wire = {};
-			current_wire = &temp_wire;
+			current_wire = 0;
 		   }
 		case event_type::MOUSEBUTTONUP:
 		  if (event.button.button == sdl2::mouse::BUTTON_LEFT)
@@ -190,13 +227,17 @@ fn int main(String[] args)
 		  if (world.get_at(mouse_grid_pos).type == NULL)
 		  {
 			world.data.push({BUTTON, {}});
-			world.set_at(mouse_grid_pos, world.data.last_ref());
+			world.set_at(mouse_grid_pos, world.data.last_idx());
 		  }
 		case scancode::BACKSPACE:
 		  if (world.get_at(mouse_grid_pos).type != NULL)
 		  {
-			*world.get_at(mouse_grid_pos) = world::null_component;
+			world.remove(world.get_idx_at(mouse_grid_pos));
 		  }
+		case scancode::G:
+		  io::printfn("World data before gc: %d", world.data.len());
+		  world.clean_null();
+		  io::printfn("World data after gc: %d", world.data.len());
 	  }
 	}	  
 	
@@ -205,7 +246,7 @@ fn int main(String[] args)
 	 * Clear the background
 	 *
    */
-	sdl2::set_draw_color(renderer, 0xff, 0xff, 0xff, 0xff);
+	sdl2::set_draw_color(renderer, {0xff, 0xff, 0xff, 0xff});
 	sdl2::clear(renderer);
 
 	/*
@@ -213,39 +254,43 @@ fn int main(String[] args)
 	 * Paint main things
 	 *
    */
-	sdl2::set_draw_color(renderer, 0xff, 0x00, 0x00, 0xff);
-	sdl2::fill_rect(renderer, &&Rectangle {pos.x, pos.y, 50, 50});
+	sdl2::set_draw_color(renderer, {0xff, 0x00, 0x00, 0xff});
+	sdl2::fill_rect(renderer, &&Rect {pos.x, pos.y, 50, 50});
 
-	if (start_point != {} && !current_wire.equals({}))
+	if (start_point != {} && current_wire != 0)
 	{
 	  Point corner = get_corner_between_points(start_point, mouse_grid_pos);
 	  draw_between_grid_points(renderer, world, start_point, corner);
 	  draw_between_grid_points(renderer, world, corner, mouse_grid_pos);
 	}
 
-	foreach (x, row : world.grid)
+	foreach (int x, row : world.grid)
 	{
-	  foreach (y, cell : row)
+	  foreach (int y, cell_idx : row)
 	  {
+		Component* cell = world.get(cell_idx);
 		switch (cell.type)
 		{
 		  case WIRE:
 			if (cell.data.as_button.enabled)
 			{
-			  sdl2::set_draw_color(renderer, 0xff, 0x00, 0x00, 0xff);
+			  if (sdl2::get_draw_color(renderer) != {0xff, 0x00, 0x00, 0xff}) sdl2::set_draw_color(renderer, {0xff, 0x00, 0x00, 0xff});
 			}
 			else
 			{
-			  sdl2::set_draw_color(renderer, 0xaa, 0x00, 0x00, 0xff);
+			  if (sdl2::get_draw_color(renderer) != {0xaa, 0x00, 0x00, 0xff}) sdl2::set_draw_color(renderer, {0xaa, 0x00, 0x00, 0xff});
 			}
-			sdl2::fill_rect(renderer, &&Rectangle {world.grid_to_world({(int)x, 0}).x, world.grid_to_world({0, (int)y}).y, world.scale, world.scale});
+			sdl2::fill_rect(renderer, &&Rect {world.grid_to_world({(int)x, 0}).x, world.grid_to_world({0, (int)y}).y, world.scale, world.scale});
 		  case BUTTON:
-			sdl2::set_draw_color(renderer, 0x00, 0xff, 0x00, 0xff);
-			sdl2::fill_rect(renderer, &&Rectangle {world.grid_to_world({(int)x, 0}).x, world.grid_to_world({0, (int)y}).y, world.scale, world.scale});
+			if (sdl2::get_draw_color(renderer) != {0x00, 0xff, 0x00, 0xff}) sdl2::set_draw_color(renderer, {0x00, 0xff, 0x00, 0xff});
+			sdl2::fill_rect(renderer, &&Rect {world.grid_to_world({(int)x, 0}).x, world.grid_to_world({0, (int)y}).y, world.scale, world.scale});
 		  default:
 		}
 	  }
 	}
+
+	sdl2::draw_text(renderer, "Hello, World!", {100, 300});
+	sdl2::draw_text(renderer, "1111", {100, 100});
 	
 	/*
 	 *
@@ -265,7 +310,7 @@ fn void draw_between_grid_points(Renderer renderer, World world, Point start, Po
 
 fn void draw_between_points(Renderer renderer, Point start, Point end)
 {
-  sdl2::fill_rect(renderer, &&Rectangle {start.x, start.y, end.x - start.x + 2, end.y - start.y + 2});
+  sdl2::fill_rect(renderer, &&Rect {start.x, start.y, end.x - start.x + 2, end.y - start.y + 2});
 }
 
 fn Point get_corner_between_points(Point start, Point end)
@@ -317,4 +362,9 @@ fn List(<Point>) get_wire_points(Point start, Point end)
 fn bool within_radius_of(int radius, Point p1, Point p2)
 {
   return (math::abs(p1 - p2)).comp_le({radius, radius}) == {true, true};
+}
+
+fn void draw_debug_info(Renderer renderer, World world)
+{
+  // TODO: show size of world.data, etc
 }

@@ -26,7 +26,7 @@
     "electronics_game": {
       // Executable or library.
       "type": "executable",
-      "linked-libraries-add": ["SDL2"],
+      "linked-libraries-add": ["SDL2", "SDL2_ttf"],
       // Additional libraries, sources
       // and overrides of global settings here.
     },

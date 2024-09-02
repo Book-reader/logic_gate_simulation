@@ -16,28 +16,73 @@ const INIT_EVERYTHING = (
 
 distinct Window = any*;
 distinct Renderer = any*;
+distinct Font = any*;
+distinct Surface = any*;
+// distinct Texture = any*;
+def Texture = Inner_Texture*;
+def Color = char[<4>];
+def Rect = int[<4>];
 
 extern fn int init(int flags) @extern("SDL_Init");
 extern fn void quit() @extern("SDL_Quit");
+extern fn int ttf_init() @extern("TTF_Init");
+extern fn void ttf_quit() @extern("TTF_Quit");
 extern fn Window create_window(char *title, int x, int y, int w, int h, uint flags) @extern("SDL_CreateWindow");
 extern fn Renderer create_renderer(Window window, int unknown_1, int unknown_2) @extern("SDL_CreateRenderer");
 extern fn ZString get_error() @extern("SDL_GetError");
 extern fn bool poll_event(Event* event) @extern("SDL_PollEvent"); 
-extern fn void set_draw_color(Renderer renderer, char r, char g, char b, char a) @extern("SDL_SetRenderDrawColor");
+extern fn void sdl_set_draw_color(Renderer renderer, char r, char g, char b, char a) @extern("SDL_SetRenderDrawColor");
+extern fn int sdl_get_draw_color(Renderer renderer, char* r, char* g, char* b, char* a) @extern("SDL_GetRenderDrawColor");
 extern fn void clear(Renderer renderer) @extern("SDL_RenderClear");
 extern fn void present(Renderer renderer) @extern("SDL_RenderPresent");
 extern fn void delay(uint ms) @extern("SDL_Delay");
 extern fn void destroy_window(Window window) @extern("SDL_DestroyWindow");
 extern fn void destroy_renderer(Renderer renderer) @extern("SDL_DestroyRenderer");
-extern fn void fill_rect(Renderer renderer, Rectangle *rectangle) @extern("SDL_RenderFillRect");
+extern fn void fill_rect(Renderer renderer, Rect *rectangle) @extern("SDL_RenderFillRect");
+extern fn Font open_font(ZString name, int size) @extern("TTF_OpenFont");
+extern fn Surface render_text_solid(Font font, ZString text, Color color) @extern("TTF_RenderText_Solid");
+extern fn Texture create_texture_from_surface(Renderer renderer, Surface surface) @extern("SDL_CreateTextureFromSurface");
+extern fn void render_copy(Renderer renderer, Texture texture, Rect* crop, Rect* size_and_pos) @extern("SDL_RenderCopy");
+extern fn void free_surface(Surface surface) @extern("SDL_FreeSurface");
+extern fn void destroy_texture(Texture texture) @extern("SDL_DestroyTexture");
+// TODO rewatch https://www.youtube.com/watch?v=sLWkUzbMhIU as it shows how to make a library to incluse in c3 instead of linking with system library
 
+fn Color get_draw_color(Renderer renderer)
+{
+  char r, g, b, a;
+  sdl_get_draw_color(renderer, &r, &g, &b, &a);
+  return {r, g, b, a};
+}
 
-// struct Event
-// {
-//   uint type;
-//   // This is not used
-//   any* data;
-// }
+fn void set_draw_color(Renderer renderer, Color color)
+{
+  sdl_set_draw_color(renderer, color.r, color.g, color.b, color.a);
+}
+
+Font font = null;
+
+import std::io;
+
+// TODO: some sort of rendering cache where it caches the generated texture pointer (not position) (it would also have to store the color) and stores it in a HashMap(<String, Texture>), then in the main function defer empty_string_cache()
+fn void draw_text(Renderer renderer, ZString text, int[<2>] pos)
+{
+  if (!font)
+  {
+	font = open_font("0xProto-Regular.ttf", 16);
+	if (!font)
+	{
+	  io::printfn("Error while loading font: %s", get_error());
+	}
+	io::printn("Loaded font for the first time");
+  }
+
+  Surface text_surface = render_text_solid(font, text, {255, 0, 255, 255});
+  defer free_surface(text_surface);
+  Texture text_texture = create_texture_from_surface(renderer, text_surface);
+  defer destroy_texture(text_texture);
+
+  render_copy(renderer, text_texture, null, &&Rect {pos, text_texture.w, text_texture.h});
+}
 
 union Event
 {
@@ -135,13 +180,14 @@ struct MouseButtonEvent
     int y;           /* Y coordinate, relative to window */
 }
 
-
-struct Rectangle
+// FIXME: in order to get a textures width and height I have to recreate its size in bytes in c3 instead of just usung an any pointer
+struct Inner_Texture
 {
-  int x;
-  int y;
+  char[8 + 4 + 4] _a;
   int w;
   int h;
+  char[4 + 4 + 4 + 4 + 8 + 8 + 8 + 8 + 4 + 4 + 8 + 8 + 8 + 8 + 8] _b;
+  // char[8 + ] _b;
 }
 
 module electronics_game::sdl2::mouse;
