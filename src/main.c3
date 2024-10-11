@@ -4,15 +4,18 @@ import electronics_game::sdl2;
 import electronics_game::sdl2::event_type;
 import electronics_game::sdl2::scancode;
 
-import electronics_game::world;
+import electronics_game::tile;
 
 import std::io;
 import std::math;
 
 import std::collections::list;
 import std::collections::map;
+import std::collections::tuple;
 
-// def WorldMap = HashMap(<Point, Component>);
+// usz is id
+def WorldMap = HashMap(<usz, Component>);
+usz id_counter = 0;
 
 bitstruct Modifiers : char
 {
@@ -80,7 +83,7 @@ fn int main(String[] args)
    * Main game loop
    *
   */
-  Event event;
+  Event sdl_event;
 
   bool running = true;
 
@@ -97,14 +100,17 @@ fn int main(String[] args)
   Point mouse_pos;
   Point offset = {0, 0};
   Point mouse_world_pos;
-  HashMap(<Point, Component>) world;
+  WorldMap world;
   world.new_init();
   defer world.free();
-  Queue(<GameEvent>) event_queue;
+  EventQueue event_queue;
   event_queue.new_init();
   defer event_queue.free();
 
+  world.set(++id_counter, &&tile::new_switch(&event_queue, {100, 100}, id_counter));
+  world.set(++id_counter, &&tile::new_bulb(&event_queue, {200, 100}, id_counter));
 
+  world.get_ref(1)!!.get_outputs()[0].connect_input(world.get_ref(2)!!.get_inputs()[0]);
 
   while (running)
   {
@@ -112,16 +118,16 @@ fn int main(String[] args)
      *
      * Handle events
      *
-   */
-    while (sdl2::poll_event(&event))
+        */
+    while (sdl2::poll_event(&sdl_event))
     {
-      switch (event.type)
+      switch (sdl_event.type)
       {
         case event_type::QUIT:
           running = false;
         case event_type::KEYDOWN:
-          io::printfn("Keycode: %s", event.key.keysym.scancode);
-          switch (event.key.keysym.scancode) {
+          io::printfn("Keycode: %s", sdl_event.key.keysym.scancode);
+          switch (sdl_event.key.keysym.scancode) {
             case scancode::LSHIFT:
             case scancode::RSHIFT:
               modifiers.shift = true;
@@ -130,13 +136,13 @@ fn int main(String[] args)
               modifiers.ctrl = true;
 
             default:
-              if (!key_buffer.contains(event.key.keysym.scancode))
+              if (!key_buffer.contains(sdl_event.key.keysym.scancode))
               {
-                key_buffer.push(event.key.keysym.scancode);
+                key_buffer.push(sdl_event.key.keysym.scancode);
               }
           }
         case event_type::KEYUP:
-          switch (event.key.keysym.scancode) {
+          switch (sdl_event.key.keysym.scancode) {
             case scancode::LSHIFT:
             case scancode::RSHIFT:
               modifiers.shift = false;
@@ -145,25 +151,29 @@ fn int main(String[] args)
               modifiers.ctrl = false;
 
             default:
-              key_buffer.remove_item(event.key.keysym.scancode);
+              key_buffer.remove_item(sdl_event.key.keysym.scancode);
           }
         case event_type::MOUSEBUTTONDOWN:
-          if (event.button.button == sdl2::mouse::BUTTON_LEFT)
+          if (sdl_event.button.button == sdl2::mouse::BUTTON_LEFT)
           {
             pressing = true;
           }
-          else if (event.button.button == sdl2::mouse::BUTTON_RIGHT)
+          else if (sdl_event.button.button == sdl2::mouse::BUTTON_RIGHT)
           {
           }
         case event_type::MOUSEBUTTONUP:
-          if (event.button.button == sdl2::mouse::BUTTON_LEFT)
+          if (sdl_event.button.button == sdl2::mouse::BUTTON_LEFT)
           {
             pressing = false;
             io::printfn("Released left mouse at %s, %s", mouse_pos.x, mouse_pos.y);
           }
+          if (try Tuple(<usz, Point>) component = get_component_id_near_point(mouse_pos, &world))
+          {
+            event_queue.push({PRESSED, component.first, {.pos = component.second}});
+          }
 
         case event_type::MOUSEMOTION:
-          mouse_pos = {event.button.x, event.button.y};
+          mouse_pos = {sdl_event.button.x, sdl_event.button.y};
           mouse_world_pos = mouse_pos + offset;
 
           if (pressing)
@@ -178,7 +188,7 @@ fn int main(String[] args)
      *
      * Handle keys
      *
-    */
+        */
     foreach (key : key_buffer)
     {
       switch (key)
@@ -193,9 +203,37 @@ fn int main(String[] args)
 
     /*
      *
+     * Handle events
+     *
+    */
+
+    usz event_num = event_queue.len();
+    for (int i = 0; i < event_num; i++)
+    {
+      GameEvent! event = event_queue.pop();
+      if (catch error = event)
+      {
+        io::printfn("ERROR: unable to handle event with message: %s", error);
+      }
+      else
+      {
+        if (event.target_id != 0)
+        {
+          world.get(event.target_id)!!.handle_event(&event);
+        }
+        else
+        {
+          io::printfn("WARNING: found event without target, this is not implemented yet. type: %s", event.type);
+          // TODO: might will be used for deleting components
+        }
+      }
+    }
+
+    /*
+     *
      * Clear the background
      *
-   */
+        */
     sdl2::set_draw_color(renderer, {0xff, 0xff, 0xff, 0xff});
     sdl2::clear(renderer);
 
@@ -203,9 +241,16 @@ fn int main(String[] args)
      *
      * Paint main things
      *
-   */
-    sdl2::set_draw_color(renderer, {0xff, 0x00, 0x00, 0xff});
+        */
 
+    foreach (value : world.value_tlist())
+    {
+      // io::printfn("%s, %s", value.get_type(), world.get(key)!!.get_size());
+      Point value_size = value.get_size();
+      Point value_pos = value.get_pos();
+      sdl2::set_draw_color(renderer, value.get_color());
+      sdl2::fill_rect(renderer, &&Rect {value_pos.x - offset.x, value_pos.y - offset.y, value_size.x, value_size.y});
+    };
     // if (start_point != {} && current_wire != 0)
     // {
     //   Point corner = get_corner_between_points(start_point, mouse_grid_pos);
@@ -219,7 +264,7 @@ fn int main(String[] args)
      *
      * Show the frame and set 60 fps
      *
-    */
+        */
     sdl2::present(renderer);
     sdl2::delay(16);
   }
@@ -256,6 +301,28 @@ fn int main(String[] args)
 //   // Both are the same already
 //   return end;
 // }
+
+fault ComponentFault
+{
+  NONE_NEARBY
+}
+
+// TODO: this could probably use some optimizing later on
+fn Tuple(<usz, Point>)! get_component_id_near_point(Point point, WorldMap* world)
+{
+  foreach (val : world.value_tlist())
+  {
+    Point key = val.get_pos();
+    Point dif = point - key;
+    io::printfn("%s", dif);
+    if ((dif).comp_ge({0, 0}) == {true, true} && (dif).comp_le(val.get_size()) == {true, true})
+    {
+      return {val.get_id(), dif};
+    }
+  };
+
+  return ComponentFault.NONE_NEARBY?;
+}
 
 fn List(<Point>) get_wire_points(Point start, Point end)
 {

@@ -27,3 +27,8 @@ fn void Queue.free(&self)
 {
   self.stuff.free();
 }
+
+fn usz Queue.len(&self) @operator(len)
+{
+  return self.stuff.len();
+}
