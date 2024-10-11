@@ -50,7 +50,7 @@ fn int main(String[] args)
    * Initialize the main window
    *
   */
-  Window window = sdl2::create_window("Game", 0, 0, 800, 600, 0);
+  SDLWindow window = sdl2::create_window("Game", 0, 0, 800, 600, 0);
   defer sdl2::destroy_window(window);
 
 
@@ -65,7 +65,7 @@ fn int main(String[] args)
    * Initialize the renderer
    *
   */
-  Renderer renderer = sdl2::create_renderer(window, -1, sdl2::render_flags::ACCELERATED);
+  SDLRenderer renderer = sdl2::create_renderer(window, -1, sdl2::render_flags::ACCELERATED);
   defer sdl2::destroy_renderer(renderer);
 
   if (!renderer)
@@ -79,7 +79,7 @@ fn int main(String[] args)
    * Main game loop
    *
   */
-  Event sdl_event;
+  SDLEvent sdl_event;
 
   bool running = true;
 
@@ -244,11 +244,7 @@ fn int main(String[] args)
 
     foreach (value : world.value_tlist())
     {
-      // io::printfn("%s, %s", value.get_type(), world.get(key)!!.get_size());
-      Point value_size = value.get_size();
-      Point value_pos = value.get_pos();
-      sdl2::set_draw_color(renderer, value.get_color());
-      sdl2::fill_rect(renderer, &&Rect {value_pos.x - offset.x, value_pos.y - offset.y, value_size.x, value_size.y});
+      value.draw(renderer, offset);
     };
 
     /*

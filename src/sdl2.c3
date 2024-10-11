@@ -2,123 +2,123 @@ module electronics_game::sdl2;
 
 const INIT_TIMER =          0x00000001u;
 const INIT_AUDIO =          0x00000010u;
-const INIT_VIDEO =          0x00000020u; 
+const INIT_VIDEO =          0x00000020u;
 const INIT_JOYSTICK =       0x00000200u;
 const INIT_HAPTIC =         0x00001000u;
-const INIT_GAMECONTROLLER = 0x00002000u;  
+const INIT_GAMECONTROLLER = 0x00002000u;
 const INIT_EVENTS =         0x00004000u;
 const INIT_SENSOR =         0x00008000u;
 const INIT_NOPARACHUTE =    0x00100000u;
 const INIT_EVERYTHING = (
-						 INIT_TIMER | INIT_AUDIO | INIT_VIDEO | INIT_EVENTS | 
-						 INIT_JOYSTICK | INIT_HAPTIC | INIT_GAMECONTROLLER | INIT_SENSOR 
+                         INIT_TIMER | INIT_AUDIO | INIT_VIDEO | INIT_EVENTS |
+                         INIT_JOYSTICK | INIT_HAPTIC | INIT_GAMECONTROLLER | INIT_SENSOR
 );
 
-distinct Window = any*;
-distinct Renderer = any*;
-distinct Font = any*;
-distinct Surface = any*;
+distinct SDLWindow = any*;
+distinct SDLRenderer = any*;
+distinct SDLFont = any*;
+distinct SDLSurface = any*;
 // distinct Texture = any*;
-def Texture = Inner_Texture*;
-def Color = char[<4>];
-def Rect = int[<4>];
+def SDLTexture = SDLInner_Texture*;
+def SDLColor = char[<4>];
+def SDLRect = int[<4>];
 
 extern fn int init(int flags) @extern("SDL_Init");
 extern fn void quit() @extern("SDL_Quit");
 extern fn int ttf_init() @extern("TTF_Init");
 extern fn void ttf_quit() @extern("TTF_Quit");
-extern fn Window create_window(char *title, int x, int y, int w, int h, uint flags) @extern("SDL_CreateWindow");
-extern fn Renderer create_renderer(Window window, int unknown_1, int unknown_2) @extern("SDL_CreateRenderer");
+extern fn SDLWindow create_window(ZString title, int x, int y, int w, int h, uint flags) @extern("SDL_CreateWindow");
+extern fn SDLRenderer create_renderer(SDLWindow window, int unknown_1, int unknown_2) @extern("SDL_CreateRenderer");
 extern fn ZString get_error() @extern("SDL_GetError");
-extern fn bool poll_event(Event* event) @extern("SDL_PollEvent"); 
-extern fn void sdl_set_draw_color(Renderer renderer, char r, char g, char b, char a) @extern("SDL_SetRenderDrawColor");
-extern fn int sdl_get_draw_color(Renderer renderer, char* r, char* g, char* b, char* a) @extern("SDL_GetRenderDrawColor");
-extern fn void clear(Renderer renderer) @extern("SDL_RenderClear");
-extern fn void present(Renderer renderer) @extern("SDL_RenderPresent");
+extern fn bool poll_event(SDLEvent* event) @extern("SDL_PollEvent");
+extern fn void sdl_set_draw_color(SDLRenderer renderer, char r, char g, char b, char a) @extern("SDL_SetRenderDrawColor");
+extern fn int sdl_get_draw_color(SDLRenderer renderer, char* r, char* g, char* b, char* a) @extern("SDL_GetRenderDrawColor");
+extern fn void clear(SDLRenderer renderer) @extern("SDL_RenderClear");
+extern fn void present(SDLRenderer renderer) @extern("SDL_RenderPresent");
 extern fn void delay(uint ms) @extern("SDL_Delay");
-extern fn void destroy_window(Window window) @extern("SDL_DestroyWindow");
-extern fn void destroy_renderer(Renderer renderer) @extern("SDL_DestroyRenderer");
-extern fn void fill_rect(Renderer renderer, Rect *rectangle) @extern("SDL_RenderFillRect");
-extern fn Font open_font(ZString name, int size) @extern("TTF_OpenFont");
-extern fn Surface render_text_solid(Font font, ZString text, Color color) @extern("TTF_RenderText_Solid");
-extern fn Texture create_texture_from_surface(Renderer renderer, Surface surface) @extern("SDL_CreateTextureFromSurface");
-extern fn void render_copy(Renderer renderer, Texture texture, Rect* crop, Rect* size_and_pos) @extern("SDL_RenderCopy");
-extern fn void free_surface(Surface surface) @extern("SDL_FreeSurface");
-extern fn void destroy_texture(Texture texture) @extern("SDL_DestroyTexture");
+extern fn void destroy_window(SDLWindow window) @extern("SDL_DestroyWindow");
+extern fn void destroy_renderer(SDLRenderer renderer) @extern("SDL_DestroyRenderer");
+extern fn void fill_rect(SDLRenderer renderer, SDLRect *rectangle) @extern("SDL_RenderFillRect");
+extern fn SDLFont open_font(ZString name, int size) @extern("TTF_OpenFont");
+extern fn SDLSurface render_text_solid(SDLFont font, ZString text, SDLColor color) @extern("TTF_RenderText_Solid");
+extern fn SDLTexture create_texture_from_surface(SDLRenderer renderer, SDLSurface surface) @extern("SDL_CreateTextureFromSurface");
+extern fn void render_copy(SDLRenderer renderer, SDLTexture texture, SDLRect* crop, SDLRect* size_and_pos) @extern("SDL_RenderCopy");
+extern fn void free_surface(SDLSurface surface) @extern("SDL_FreeSurface");
+extern fn void destroy_texture(SDLTexture texture) @extern("SDL_DestroyTexture");
 // TODO rewatch https://www.youtube.com/watch?v=sLWkUzbMhIU as it shows how to make a library to incluse in c3 instead of linking with system library
 
-fn Color get_draw_color(Renderer renderer)
+fn SDLColor get_draw_color(SDLRenderer renderer)
 {
   char r, g, b, a;
   sdl_get_draw_color(renderer, &r, &g, &b, &a);
   return {r, g, b, a};
 }
 
-fn void set_draw_color(Renderer renderer, Color color)
+fn void set_draw_color(SDLRenderer renderer, SDLColor color)
 {
   sdl_set_draw_color(renderer, color.r, color.g, color.b, color.a);
 }
 
-Font font = null;
+SDLFont font = null;
 
 import std::io;
 
 // TODO: some sort of rendering cache where it caches the generated texture pointer (not position) (it would also have to store the color) and stores it in a HashMap(<String, Texture>), then in the main function defer empty_string_cache()
-fn void draw_text(Renderer renderer, ZString text, int[<2>] pos)
+fn void draw_text(SDLRenderer renderer, ZString text, int[<2>] pos, SDLColor color = {0xff, 0x00, 0xff, 0xff})
 {
   if (!font)
   {
-	font = open_font("0xProto-Regular.ttf", 16);
-	if (!font)
-	{
-	  io::printfn("Error while loading font: %s", get_error());
-	}
-	io::printn("Loaded font for the first time");
+    font = open_font("0xProto-Regular.ttf", 16);
+    if (!font)
+    {
+      io::printfn("Error while loading font: %s", get_error());
+    }
+    io::printn("Loaded font for the first time");
   }
 
-  Surface text_surface = render_text_solid(font, text, {255, 0, 255, 255});
+  SDLSurface text_surface = render_text_solid(font, text, color);
   defer free_surface(text_surface);
-  Texture text_texture = create_texture_from_surface(renderer, text_surface);
+  SDLTexture text_texture = create_texture_from_surface(renderer, text_surface);
   defer destroy_texture(text_texture);
 
-  render_copy(renderer, text_texture, null, &&Rect {pos, text_texture.w, text_texture.h});
+  render_copy(renderer, text_texture, null, &&SDLRect {pos, text_texture.w, text_texture.h});
 }
 
-union Event
+union SDLEvent
 {
-    uint type;                            /* Event type, shared with all events */
-    // SDL_CommonEvent common;                 /* Common event data */
-    // SDL_DisplayEvent display;               /* Display event data */
-    // SDL_WindowEvent window;                 /* Window event data */
-    KeyboardEvent key;                  /* Keyboard event data */
-    // SDL_TextEditingEvent edit;              /* Text editing event data */
-    // SDL_TextEditingExtEvent editExt;        /* Extended text editing event data */
-    // SDL_TextInputEvent text;                /* Text input event data */
-    MouseMotionEvent motion;            /* Mouse motion event data */
-    MouseButtonEvent button;            /* Mouse button event data */
-    // SDL_MouseWheelEvent wheel;              /* Mouse wheel event data */
-    // SDL_JoyAxisEvent jaxis;                 /* Joystick axis event data */
-    // SDL_JoyBallEvent jball;                 /* Joystick ball event data */
-    // SDL_JoyHatEvent jhat;                   /* Joystick hat event data */
-    // SDL_JoyButtonEvent jbutton;             /* Joystick button event data */
-    // SDL_JoyDeviceEvent jdevice;             /* Joystick device change event data */
-    // SDL_JoyBatteryEvent jbattery;           /* Joystick battery event data */
-    // SDL_ControllerAxisEvent caxis;          /* Game Controller axis event data */
-    // SDL_ControllerButtonEvent cbutton;      /* Game Controller button event data */
-    // SDL_ControllerDeviceEvent cdevice;      /* Game Controller device event data */
-    // SDL_ControllerTouchpadEvent ctouchpad;  /* Game Controller touchpad event data */
-    // SDL_ControllerSensorEvent csensor;      /* Game Controller sensor event data */
-    // SDL_AudioDeviceEvent adevice;           /* Audio device event data */
-    // SDL_SensorEvent sensor;                 /* Sensor event data */
-    // SDL_QuitEvent quit;                     /* Quit request event data */
-    // SDL_UserEvent user;                     /* Custom event data */
-    // SDL_SysWMEvent syswm;                   /* System dependent window event data */
-    // SDL_TouchFingerEvent tfinger;           /* Touch finger event data */
-    // SDL_MultiGestureEvent mgesture;         /* Gesture event data */
-    // SDL_DollarGestureEvent dgesture;        /* Gesture event data */
-    // SDL_DropEvent drop;                     /* Drag and drop event data */
+  uint type;                            /* Event type, shared with all events */
+  // SDL_CommonEvent common;                 /* Common event data */
+  // SDL_DisplayEvent display;               /* Display event data */
+  // SDL_WindowEvent window;                 /* Window event data */
+  SDLKeyboardEvent key;                  /* Keyboard event data */
+  // SDL_TextEditingEvent edit;              /* Text editing event data */
+  // SDL_TextEditingExtEvent editExt;        /* Extended text editing event data */
+  // SDL_TextInputEvent text;                /* Text input event data */
+  SDLMouseMotionEvent motion;            /* Mouse motion event data */
+  SDLMouseButtonEvent button;            /* Mouse button event data */
+  // SDL_MouseWheelEvent wheel;              /* Mouse wheel event data */
+  // SDL_JoyAxisEvent jaxis;                 /* Joystick axis event data */
+  // SDL_JoyBallEvent jball;                 /* Joystick ball event data */
+  // SDL_JoyHatEvent jhat;                   /* Joystick hat event data */
+  // SDL_JoyButtonEvent jbutton;             /* Joystick button event data */
+  // SDL_JoyDeviceEvent jdevice;             /* Joystick device change event data */
+  // SDL_JoyBatteryEvent jbattery;           /* Joystick battery event data */
+  // SDL_ControllerAxisEvent caxis;          /* Game Controller axis event data */
+  // SDL_ControllerButtonEvent cbutton;      /* Game Controller button event data */
+  // SDL_ControllerDeviceEvent cdevice;      /* Game Controller device event data */
+  // SDL_ControllerTouchpadEvent ctouchpad;  /* Game Controller touchpad event data */
+  // SDL_ControllerSensorEvent csensor;      /* Game Controller sensor event data */
+  // SDL_AudioDeviceEvent adevice;           /* Audio device event data */
+  // SDL_SensorEvent sensor;                 /* Sensor event data */
+  // SDL_QuitEvent quit;                     /* Quit request event data */
+  // SDL_UserEvent user;                     /* Custom event data */
+  // SDL_SysWMEvent syswm;                   /* System dependent window event data */
+  // SDL_TouchFingerEvent tfinger;           /* Touch finger event data */
+  // SDL_MultiGestureEvent mgesture;         /* Gesture event data */
+  // SDL_DollarGestureEvent dgesture;        /* Gesture event data */
+  // SDL_DropEvent drop;                     /* Drag and drop event data */
 
-    /* This is necessary for ABI compatibility between Visual C++ and GCC.
+  /* This is necessary for ABI compatibility between Visual C++ and GCC.
        Visual C++ will respect the push pack pragma and use 52 bytes (size of
        SDL_TextEditingEvent, the largest structure for 32-bit and 64-bit
        architectures) for this union, and GCC will use the alignment of the
@@ -131,58 +131,58 @@ union Event
        the next multiple of 16, 64, and on architectures where pointers are
        even larger the size of SDL_UserEvent will dominate as being 3 pointers.
     */
-    // Uint8 padding[sizeof(void *) <= 8 ? 56 : sizeof(void *) == 16 ? 64 : 3 * sizeof(void *)];
+  // Uint8 padding[sizeof(void *) <= 8 ? 56 : sizeof(void *) == 16 ? 64 : 3 * sizeof(void *)];
 }
-struct KeyboardEvent
+struct SDLKeyboardEvent
 {
   uint type;        /* ::SDL_KEYDOWN or ::SDL_KEYUP */
   uint timestamp;   /* In milliseconds, populated using SDL_GetTicks() */
   uint windowID;    /* The window with keyboard focus, if any */
   char state;        /* ::SDL_PRESSED or ::SDL_RELEASED */
   char repeat;       /* Non-zero if this is a key repeat */
-  char padding2;
-  char padding3;
-  Keysym keysym;  /* The key that was pressed or released */
+  char[2] padding;
+  SDLKeysym keysym;  /* The key that was pressed or released */
 }
 
-struct Keysym
+struct SDLKeysym
 {
-    ushort scancode;      /* SDL physical key code - see ::SDL_Scancode for details */
-    uint sym;            /* SDL virtual key code - see ::SDL_Keycode for details */
-    char mod;                 /* current key modifiers */
-    uint unused;
+  ushort scancode;      /* SDL physical key code - see ::SDL_Scancode for details */
+  uint sym;            /* SDL virtual key code - see ::SDL_Keycode for details */
+  char mod;                 /* current key modifiers */
+  uint unused;
 }
 
-struct MouseMotionEvent
+struct SDLMouseMotionEvent
 {
-    uint type;        /* ::SDL_MOUSEMOTION */
-    uint timestamp;   /* In milliseconds, populated using SDL_GetTicks() */
-    uint windowID;    /* The window with mouse focus, if any */
-    uint which;       /* The mouse instance id, or SDL_TOUCH_MOUSEID */
-    uint state;       /* The current button state */
-    int x;           /* X coordinate, relative to window */
-    int y;           /* Y coordinate, relative to window */
-    int xrel;        /* The relative motion in the X direction */
-    int yrel;        /* The relative motion in the Y direction */
+  uint type;        /* ::SDL_MOUSEMOTION */
+  uint timestamp;   /* In milliseconds, populated using SDL_GetTicks() */
+  uint windowID;    /* The window with mouse focus, if any */
+  uint which;       /* The mouse instance id, or SDL_TOUCH_MOUSEID */
+  uint state;       /* The current button state */
+  int x;           /* X coordinate, relative to window */
+  int y;           /* Y coordinate, relative to window */
+  int xrel;        /* The relative motion in the X direction */
+  int yrel;        /* The relative motion in the Y direction */
 }
 
-struct MouseButtonEvent
+struct SDLMouseButtonEvent
 {
-    uint type;        /* ::SDL_MOUSEBUTTONDOWN or ::SDL_MOUSEBUTTONUP */
-    uint timestamp;   /* In milliseconds, populated using SDL_GetTicks() */
-    uint windowID;    /* The window with mouse focus, if any */
-    uint which;       /* The mouse instance id, or SDL_TOUCH_MOUSEID */
-    char button;       /* The mouse button index */
-    char state;        /* ::SDL_PRESSED or ::SDL_RELEASED */
-    char clicks;       /* 1 for single-click, 2 for double-click, etc. */
-    char padding1;
-    int x;           /* X coordinate, relative to window */
-    int y;           /* Y coordinate, relative to window */
+  uint type;        /* ::SDL_MOUSEBUTTONDOWN or ::SDL_MOUSEBUTTONUP */
+  uint timestamp;   /* In milliseconds, populated using SDL_GetTicks() */
+  uint windowID;    /* The window with mouse focus, if any */
+  uint which;       /* The mouse instance id, or SDL_TOUCH_MOUSEID */
+  char button;       /* The mouse button index */
+  char state;        /* ::SDL_PRESSED or ::SDL_RELEASED */
+  char clicks;       /* 1 for single-click, 2 for double-click, etc. */
+  char padding1;
+  int x;           /* X coordinate, relative to window */
+  int y;           /* Y coordinate, relative to window */
 }
 
 // FIXME: in order to get a textures width and height I have to recreate its size in bytes in c3 instead of just usung an any pointer
-struct Inner_Texture
+struct SDLInner_Texture
 {
+  // TODO: replace with the actual struct members for better portability (currently won't work on 32 bit systems)
   char[8 + 4 + 4] _a;
   int w;
   int h;
@@ -238,7 +238,7 @@ const MOUSEWHEEL = 0x403;
 /*
 SDL_KEYMAPCHANGED,          /* Keymap changed due to a system event such as an
                                      input language or keyboard layout change.
-                                */
+ */
     SDL_TEXTEDITING_EXT,       /* Extended keyboard text editing (composition) */
 
     /* Mouse events */
@@ -305,13 +305,13 @@ SDL_KEYMAPCHANGED,          /* Keymap changed due to a system event such as an
     SDL_POLLSENTINEL = 0x7F00, /* Signals the end of an event poll cycle */
 
     /** Events ::SDL_USEREVENT through ::SDL_LASTEVENT are for your use,
-     *  and should be allocated with SDL_RegisterEvents()
-     */
+ *  and should be allocated with SDL_RegisterEvents()
+ */
     SDL_USEREVENT    = 0x8000,
 
     /**
-     *  This last event is only for bounding internal arrays
-     */
+ *  This last event is only for bounding internal arrays
+ */
     SDL_LASTEVENT    = 0xFFFF
 
 

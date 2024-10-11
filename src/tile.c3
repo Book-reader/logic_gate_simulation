@@ -72,8 +72,7 @@ interface Component
   fn Input*[] get_inputs();
   fn void handle_event(GameEvent* event);
   fn Point get_size();
-  // TODO: replace get_color with draw() for drawing more complex shapes defined by the Component itself
-  fn Color get_color();
+  fn void draw(SDLRenderer renderer, Point offset);
   fn Point get_pos();
   fn usz get_id();
 
@@ -148,10 +147,13 @@ fn Point Switch.get_size(&self) @dynamic
   return self.size;
 }
 
-fn Color Switch.get_color(&self) @dynamic
+fn void Switch.draw(&self, SDLRenderer renderer, Point offset) @dynamic
 {
   // fun compiler SIGSEV in c3 0.6.3
-  return self.main_output.on ? {0xcc, 0x00, 0x00, 0xff} : {0xff, 0x00, 0x00, 0xff};
+  sdl2::set_draw_color(renderer, self.main_output.on ? {0xcc, 0x00, 0x00, 0xff} : {0xff, 0x00, 0x00, 0xff});
+  sdl2::fill_rect(renderer, &&SDLRect {self.pos.x - offset.x, self.pos.y - offset.y, self.size.x, self.size.y});
+
+  sdl2::draw_text(renderer, self.main_output.on ? (ZString)"1\0" : (ZString)"0\0", {self.pos.x + SWITCH_SIZE.x / 4 - offset.x, self.pos.y - offset.y}, {0, 0, 0, 0xff});
 }
 
 fn Point Switch.get_pos(&self) @dynamic
@@ -236,9 +238,12 @@ fn void Bulb.recalculate_state(&self)
   }
 }
 
-fn Color Bulb.get_color(&self) @dynamic
+fn void Bulb.draw(&self, SDLRenderer renderer, Point offset) @dynamic
 {
-  return self.on ? {0xff, 0x00, 0xff, 0xff} : {0x00, 0x00, 0x00, 0xff};
+  sdl2::set_draw_color(renderer, self.on ? {0xff, 0x00, 0xff, 0xff} : {0x00, 0x00, 0x00, 0xff});
+  sdl2::fill_rect(renderer, &&SDLRect {self.pos.x - offset.x, self.pos.y - offset.y, self.size.x, self.size.y});
+
+  sdl2::draw_text(renderer, self.on ? (ZString)"1\0" : (ZString)"0\0", {self.pos.x + SWITCH_SIZE.x / 4 - offset.x, self.pos.y - offset.y}, {0xff, 0xff, 0xff, 0xff});
 }
 
 fn Point Bulb.get_pos(&self) @dynamic
@@ -341,9 +346,12 @@ fn void AndGate.recalculate_state(&self)
   }
 }
 
-fn Color AndGate.get_color(&self) @dynamic
+fn void AndGate.draw(&self, SDLRenderer renderer, Point offset) @dynamic
 {
-  return self.main_output.on ? {0x99, 0xff, 0x99, 0xff} : {0xff, 0x99, 0x99, 0xff};
+  sdl2::set_draw_color(renderer, self.main_output.on ? {0x99, 0xff, 0x99, 0xff} : {0xff, 0x99, 0x99, 0xff});
+  sdl2::fill_rect(renderer, &&SDLRect {self.pos.x - offset.x, self.pos.y - offset.y, self.size.x, self.size.y});
+
+  sdl2::draw_text(renderer, self.main_output.on ? (ZString)"1\0" : (ZString)"0\0", {self.pos.x + SWITCH_SIZE.x / 4 - offset.x, self.pos.y - offset.y}, {0, 0, 0, 0xff});
 }
 
 fn Point AndGate.get_pos(&self) @dynamic
