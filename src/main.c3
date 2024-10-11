@@ -102,9 +102,15 @@ fn int main(String[] args)
   defer event_queue.free();
 
   world.set(++id_counter, &&tile::new_switch(&event_queue, {100, 100}, id_counter));
-  world.set(++id_counter, &&tile::new_bulb(&event_queue, {200, 100}, id_counter));
+  world.set(++id_counter, &&tile::new_switch(&event_queue, {200, 100}, id_counter));
 
-  world.get_ref(1)!!.get_outputs()[0].connect_input(world.get_ref(2)!!.get_inputs()[0]);
+  world.set(++id_counter, &&tile::new_andgate(&event_queue, {150, 150}, id_counter));
+  world.set(++id_counter, &&tile::new_bulb(&event_queue, {150, 200}, id_counter));
+
+  world.get_ref(1)!!.get_outputs()[0].connect_input(world.get_ref(3)!!.get_inputs()[0]);
+  world.get_ref(2)!!.get_outputs()[0].connect_input(world.get_ref(3)!!.get_inputs()[1]);
+
+  world.get_ref(3)!!.get_outputs()[0].connect_input(world.get_ref(4)!!.get_inputs()[0]);
 
   while (running)
   {
@@ -112,7 +118,7 @@ fn int main(String[] args)
      *
      * Handle events
      *
-        */
+    */
     while (sdl2::poll_event(&sdl_event))
     {
       switch (sdl_event.type)
@@ -159,7 +165,6 @@ fn int main(String[] args)
           if (sdl_event.button.button == sdl2::mouse::BUTTON_LEFT)
           {
             pressing = false;
-            io::printfn("Released left mouse at %s, %s", mouse_pos.x, mouse_pos.y);
           }
           if (try Tuple(<usz, Point>) component = get_component_id_near_point(mouse_pos, &world))
           {
@@ -182,7 +187,7 @@ fn int main(String[] args)
      *
      * Handle keys
      *
-        */
+    */
     foreach (key : key_buffer)
     {
       switch (key)
@@ -273,7 +278,6 @@ fn Tuple(<usz, Point>)! get_component_id_near_point(Point point, WorldMap* world
   {
     Point key = val.get_pos();
     Point dif = point - key;
-    io::printfn("%s", dif);
     if ((dif).comp_ge({0, 0}) == {true, true} && (dif).comp_le(val.get_size()) == {true, true})
     {
       return {val.get_id(), dif};
