@@ -24,10 +24,6 @@ bitstruct Modifiers : char
   bool ctrl : 2;
 }
 
-
-/*
-***REMOVED***
-*/
 fn int main(String[] args)
 {
   /*
@@ -86,8 +82,6 @@ fn int main(String[] args)
   Event sdl_event;
 
   bool running = true;
-
-  // Point pos = {10, 10};
 
   List(<ushort>) key_buffer;
   key_buffer.new_init();
@@ -233,7 +227,7 @@ fn int main(String[] args)
      *
      * Clear the background
      *
-        */
+    */
     sdl2::set_draw_color(renderer, {0xff, 0xff, 0xff, 0xff});
     sdl2::clear(renderer);
 
@@ -241,7 +235,7 @@ fn int main(String[] args)
      *
      * Paint main things
      *
-        */
+    */
 
     foreach (value : world.value_tlist())
     {
@@ -251,55 +245,21 @@ fn int main(String[] args)
       sdl2::set_draw_color(renderer, value.get_color());
       sdl2::fill_rect(renderer, &&Rect {value_pos.x - offset.x, value_pos.y - offset.y, value_size.x, value_size.y});
     };
-    // if (start_point != {} && current_wire != 0)
-    // {
-    //   Point corner = get_corner_between_points(start_point, mouse_grid_pos);
-    //   draw_between_grid_points(renderer, world, start_point, corner);
-    //   draw_between_grid_points(renderer, world, corner, mouse_grid_pos);
-    // }
-
-    // draw_debug_info(renderer, &world, modifiers);
 
     /*
      *
      * Show the frame and set 60 fps
      *
-        */
+    */
     sdl2::present(renderer);
     sdl2::delay(16);
   }
   return 0;
 }
 
-// fn void draw_between_grid_points(Renderer renderer, World world, Point start, Point end)
-// {
-//   draw_between_points(renderer, world.grid_to_world(start), world.grid_to_world(end));
-// }
-
 // fn void draw_between_points(Renderer renderer, Point start, Point end)
 // {
 //   sdl2::fill_rect(renderer, &&Rect {start.x, start.y, end.x - start.x + 2, end.y - start.y + 2});
-// }
-
-// fn Point get_corner_between_points(Point start, Point end)
-// {
-//   Point curr = start;
-//   if (curr.x != end.x)
-//   {
-//     while (curr.x > end.x) curr.x --;
-//     while (curr.x < end.x) curr.x ++;
-
-//     return curr;
-//   }
-//   if (curr.y != end.y)
-//   {
-//     while (curr.y > end.y) curr.y --;
-//     while (curr.y < end.y) curr.y ++;
-
-//     return curr;
-//   }
-//   // Both are the same already
-//   return end;
 // }
 
 fault ComponentFault
@@ -307,7 +267,6 @@ fault ComponentFault
   NONE_NEARBY
 }
 
-// TODO: this could probably use some optimizing later on
 fn Tuple(<usz, Point>)! get_component_id_near_point(Point point, WorldMap* world)
 {
   foreach (val : world.value_tlist())
@@ -348,117 +307,3 @@ fn List(<Point>) get_wire_points(Point start, Point end)
 
   return points;
 }
-
-// fn bool within_radius_of(int radius, Point p1, Point p2)
-// {
-//   return (math::abs(p1 - p2)).comp_le({radius, radius}) == {true, true};
-// }
-
-// fn void draw_debug_info(Renderer renderer, World* world, Modifiers modifiers)
-// {
-//   // TODO: show size of world.data, etc
-//   sdl2::draw_text(renderer, "Debug", {0, 0});
-//   DString buf;
-//   Formatter fmt;
-//   fmt.init(&push_buf, &buf);
-//   // the \0 is VERY important as it null-terminates the string for C to interpret
-//   fmt.printf("objects: %d\0", world.data.len() - 1)!!;
-//   sdl2::draw_text(renderer, (ZString)buf.str_view(), {0, 20});
-//   buf = {};
-//   fmt.printf("modifiers: shift:%d, ctrl:%d, alt:%d\0", modifiers.shift, modifiers.ctrl, modifiers.alt)!!;
-//   sdl2::draw_text(renderer, (ZString)buf.str_view(), {0, 40});
-// }
-
-// fn void! push_buf(void* buffer, char c)
-// {
-//   ((DString*)buffer).append_char(c);
-// }
-
-
-// // TODO: this leaves behind objects
-// // related creating a wire and clicking on the same space causes new wire to create that is never removed
-// fn void flood_fill(World* world, Point point, usz data_idx)
-// {
-//   // Only works on wires
-//   if (world.data[data_idx].type != WIRE) return;
-
-//   Point point_to_replace;
-
-//   usz new_data_idx = world.data.len();
-//   world.data.push({WIRE, {}});
-
-//   if (world.get_idx_at(point + {0, 1}) == data_idx)
-//   {
-//     point_to_replace = point + {0, 1};
-//   }
-//   else if (world.get_idx_at(point - {0, 1}) == data_idx)
-//   {
-//     point_to_replace = point - {0, 1};
-//   }
-//   else if (world.get_idx_at(point + {1, 0}) == data_idx)
-//   {
-//     point_to_replace = point + {1, 0};
-//   }
-//   else if (world.get_idx_at(point - {1, 0}) == data_idx)
-//   {
-//     point_to_replace = point - {1, 0};
-//   }
-//   else
-//   {
-//     io::printn("Was unable to split wire!");
-//     return;
-//   }
-
-//   // Depth first search
-//   dfs(world, point_to_replace, data_idx, new_data_idx);
-
-//   bool still_exists = false;
-//   bool new_exists = false;
-//   foreach OUTER: (row : world.grid)
-//   {
-//     if (row.contains(data_idx))
-//     {
-//       still_exists = true;
-//     }
-//     if (row.contains(new_data_idx))
-//     {
-//       new_exists = true;
-//     }
-//     if (new_exists && still_exists)
-//     {
-//       break OUTER;
-//     }
-//   }
-//   if (!still_exists)
-//   {
-//     world.remove(data_idx);
-//   }
-//   if (!new_exists)
-//   {
-//     world.remove(new_data_idx);
-//   }
-// }
-
-// fn void dfs(World* world, Point point, usz data_idx, usz new_data_idx)
-// {
-//   if (world.get_idx_at(point) != data_idx) return;
-
-//   world.set_at(point, new_data_idx);
-
-//   if (world.get_idx_at(point + {0, 1}) == data_idx)
-//   {
-//     dfs(world, point + {0, 1}, data_idx, new_data_idx);
-//   }
-//   if (world.get_idx_at(point - {0, 1}) == data_idx)
-//   {
-//     dfs(world, point - {0, 1}, data_idx, new_data_idx);
-//   }
-//   if (world.get_idx_at(point + {1, 0}) == data_idx)
-//   {
-//     dfs(world, point + {1, 0}, data_idx, new_data_idx);
-//   }
-//   if (world.get_idx_at(point - {1, 0}) == data_idx)
-//   {
-//     dfs(world, point - {1, 0}, data_idx, new_data_idx);
-//   }
-// }

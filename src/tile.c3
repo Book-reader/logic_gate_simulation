@@ -74,10 +74,6 @@ interface Component
   fn Input*[] get_inputs();
   fn void handle_event(GameEvent* event);
   fn Point get_size();
-
-  fn void recalculate_state();
-  fn ComponentType get_type();
-
   // TODO: replace get_color with draw() for drawing more complex shapes defined by the Component itself
   fn Color get_color();
   fn Point get_pos();
@@ -88,13 +84,6 @@ interface Component
   // fn Rotation get_rotation();
   // Rotation being an enum
 }
-
-enum ComponentType
-{
-  SWITCH,
-  BULB
-}
-
 
 /*
  *
@@ -109,7 +98,7 @@ const Point SWITCH_SIZE = {20, 20};
 
 fn Switch new_switch(EventQueue* event_queue, Point pos, usz id)
 {
-  return {{false, {0, 1}, 0}, event_queue, SWITCH_SIZE, SWITCH, pos, id};
+  return {{false, {0, 1}, 0}, event_queue, SWITCH_SIZE, pos, id};
 }
 
 struct Switch (Component)
@@ -117,7 +106,6 @@ struct Switch (Component)
   Output main_output;
   EventQueue* event_queue;
   Point size;
-  ComponentType type;
   Point pos;
   usz id;
 }
@@ -136,7 +124,6 @@ fn void Switch.handle_event(&self, GameEvent* event) @dynamic
       {
         io::printfn("not connected to anything");
       }
-      self.recalculate_state();
     default:
   }
 }
@@ -160,16 +147,6 @@ fn Input*[] Switch.get_inputs(&self) @dynamic
 fn Point Switch.get_size(&self) @dynamic
 {
   return self.size;
-}
-
-fn void Switch.recalculate_state(&self) @dynamic
-{
-  // This is not used because the only state a switch has is its output, which only changes on press
-}
-
-fn ComponentType Switch.get_type(&self) @dynamic
-{
-  return self.type;
 }
 
 fn Color Switch.get_color(&self) @dynamic
@@ -201,7 +178,7 @@ const Point BULB_SIZE = {20, 20};
 
 fn Bulb new_bulb(EventQueue* event_queue, Point pos, usz id)
 {
-  return {{id, null}, event_queue, BULB_SIZE, false, BULB, pos, id};
+  return {{id, null}, event_queue, BULB_SIZE, false, pos, id};
 }
 
 struct Bulb (Component)
@@ -210,7 +187,6 @@ struct Bulb (Component)
   EventQueue* event_queue;
   Point size;
   bool on;
-  ComponentType type;
   Point pos;
   usz id;
 }
@@ -248,7 +224,7 @@ fn Point Bulb.get_size(&self) @dynamic
   return self.size;
 }
 
-fn void Bulb.recalculate_state(&self) @dynamic
+fn void Bulb.recalculate_state(&self)
 {
   if (self.main_input.on != null)
   {
@@ -258,11 +234,6 @@ fn void Bulb.recalculate_state(&self) @dynamic
   {
     self.on = false;
   }
-}
-
-fn ComponentType Bulb.get_type(&self) @dynamic
-{
-  return self.type;
 }
 
 fn Color Bulb.get_color(&self) @dynamic
