@@ -4,7 +4,7 @@ import electronics_game::sdl2;
 import electronics_game::sdl2::event_type;
 import electronics_game::sdl2::scancode;
 
-import electronics_game::tile;
+import electronics_game::component;
 
 import std::io;
 import std::math;
@@ -101,11 +101,11 @@ fn int main(String[] args)
   event_queue.new_init();
   defer event_queue.free();
 
-  world.set(++id_counter, &&tile::new_switch(&event_queue, {100, 100}, id_counter));
-  world.set(++id_counter, &&tile::new_switch(&event_queue, {200, 100}, id_counter));
+  world.set(++id_counter, &&switch_2::new(&event_queue, {100, 100}, id_counter));
+  world.set(++id_counter, &&switch_2::new(&event_queue, {200, 100}, id_counter));
 
-  world.set(++id_counter, &&tile::new_andgate(&event_queue, {150, 150}, id_counter));
-  world.set(++id_counter, &&tile::new_bulb(&event_queue, {150, 200}, id_counter));
+  world.set(++id_counter, &&andgate::new(&event_queue, {150, 150}, id_counter));
+  world.set(++id_counter, &&bulb::new(&event_queue, {150, 200}, id_counter));
 
   world.get_ref(1)!!.get_outputs()[0].connect_input(world.get_ref(3)!!.get_inputs()[0]);
   world.get_ref(2)!!.get_outputs()[0].connect_input(world.get_ref(3)!!.get_inputs()[1]);
