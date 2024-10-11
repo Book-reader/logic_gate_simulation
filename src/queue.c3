@@ -1,4 +1,4 @@
-module electronics_game::queue(<Type>);
+module logic_gate_simulation::queue(<Type>);
 
 import std::collections::list;
 

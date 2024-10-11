@@ -1,4 +1,4 @@
-module electronics_game::component::andgate;
+module logic_gate_simulation::component::andgate;
 /*
  *
  *
@@ -8,7 +8,7 @@ module electronics_game::component::andgate;
  *
  *
 */
-import electronics_game::sdl2;
+import sdl2;
 
 // TODO remove (hack that causes memory leak)
 import std::collections::list;

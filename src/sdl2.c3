@@ -1,4 +1,4 @@
-module electronics_game::sdl2;
+module sdl2;
 
 const INIT_TIMER =          0x00000001u;
 const INIT_AUDIO =          0x00000010u;
@@ -190,7 +190,7 @@ struct SDLInner_Texture
   // char[8 + ] _b;
 }
 
-module electronics_game::sdl2::mouse;
+module sdl2::mouse;
 
 macro button(x)
 {
@@ -209,7 +209,7 @@ const BUTTON_X2 =       5;
 // const BUTTON_X2MASK =   button(BUTTON_X2);
 
 
-module electronics_game::sdl2::event_type;
+module sdl2::event_type;
 
 const FIRSTEVENT = 0;
 const QUIT = 0x100;
@@ -318,7 +318,7 @@ SDL_KEYMAPCHANGED,          /* Keymap changed due to a system event such as an
 
 */
 
-module electronics_game::sdl2::render_flags;
+module sdl2::render_flags;
 
 const SOFTWARE = 0x00000001;      /* The renderer is a software fallback */
 

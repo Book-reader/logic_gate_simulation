@@ -1,4 +1,4 @@
-module electronics_game::component::lever;
+module logic_gate_simulation::component::lever;
 /*
  *
  *
@@ -8,7 +8,7 @@ module electronics_game::component::lever;
  *
  *
 */
-import electronics_game::sdl2;
+import sdl2;
 
 import std::io;
 

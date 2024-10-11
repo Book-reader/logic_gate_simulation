@@ -1,4 +1,4 @@
-module electronics_game::component::bulb;
+module logic_gate_simulation::component::bulb;
 /*
  *
  *
@@ -8,7 +8,7 @@ module electronics_game::component::bulb;
  *
  *
 */
-import electronics_game::sdl2;
+import sdl2;
 
 import std::collections::list;
 

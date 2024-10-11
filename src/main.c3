@@ -1,10 +1,10 @@
-module electronics_game;
+module logic_gate_simulation;
 
-import electronics_game::sdl2;
-import electronics_game::sdl2::event_type;
-import electronics_game::sdl2::scancode;
+import sdl2;
+import sdl2::event_type;
+import sdl2::scancode;
 
-import electronics_game::component;
+import logic_gate_simulation::component;
 
 import std::io;
 import std::math;

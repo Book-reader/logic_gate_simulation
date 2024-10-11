@@ -1,9 +1,8 @@
-module electronics_game::component;
+module logic_gate_simulation::component;
 
-import electronics_game::queue;
-import electronics_game::sdl2;
+import logic_gate_simulation::queue;
 
-import std::io;
+import sdl2;
 
 def Point = int[<2>];
 def EventQueue = Queue(<GameEvent>);
