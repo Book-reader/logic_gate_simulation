@@ -101,8 +101,8 @@ fn int main(String[] args)
   event_queue.new_init();
   defer event_queue.free();
 
-  world.set(++id_counter, &&switch_2::new(&event_queue, {100, 100}, id_counter));
-  world.set(++id_counter, &&switch_2::new(&event_queue, {200, 100}, id_counter));
+  world.set(++id_counter, &&lever::new(&event_queue, {100, 100}, id_counter));
+  world.set(++id_counter, &&lever::new(&event_queue, {200, 100}, id_counter));
 
   world.set(++id_counter, &&andgate::new(&event_queue, {150, 150}, id_counter));
   world.set(++id_counter, &&bulb::new(&event_queue, {150, 200}, id_counter));
