@@ -4,6 +4,8 @@ import logic_gate_simulation::queue;
 
 import sdl2;
 
+import std::io;
+
 def Point = int[<2>];
 def EventQueue = Queue(<GameEvent>);
 
@@ -76,4 +78,11 @@ interface Component
   // It would also likely be really complex to implement and update
   // fn Rotation get_rotation();
   // Rotation being an enum
+}
+
+// TODO: error detection
+fn void connect(EventQueue* event_queue, Component* out, usz out_id, Component* in, usz in_id)
+{
+  out.get_outputs()[out_id].connect_input(in.get_inputs()[in_id]);
+  event_queue.push({POWER_STATE_CHANGE, in.get_id(), {}});
 }

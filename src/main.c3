@@ -104,13 +104,13 @@ fn int main(String[] args)
   world.set(++id_counter, &&lever::new(&event_queue, {100, 100}, id_counter));
   world.set(++id_counter, &&lever::new(&event_queue, {200, 100}, id_counter));
 
-  world.set(++id_counter, &&andgate::new(&event_queue, {150, 150}, id_counter));
+  world.set(++id_counter, &&xnorgate::new(&event_queue, {150, 150}, id_counter));
   world.set(++id_counter, &&bulb::new(&event_queue, {150, 200}, id_counter));
 
-  world.get_ref(1)!!.get_outputs()[0].connect_input(world.get_ref(3)!!.get_inputs()[0]);
-  world.get_ref(2)!!.get_outputs()[0].connect_input(world.get_ref(3)!!.get_inputs()[1]);
+  component::connect(&event_queue, world.get_ref(1)!!, 0, world.get_ref(3)!!, 0);
+  component::connect(&event_queue, world.get_ref(2)!!, 0, world.get_ref(3)!!, 1);
 
-  world.get_ref(3)!!.get_outputs()[0].connect_input(world.get_ref(4)!!.get_inputs()[0]);
+  component::connect(&event_queue, world.get_ref(3)!!, 0, world.get_ref(4)!!, 0);
 
   while (running)
   {
