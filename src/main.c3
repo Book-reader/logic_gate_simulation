@@ -4,6 +4,8 @@ import sdl2;
 import sdl2::event_type;
 import sdl2::scancode;
 
+import sdl2_ui;
+
 import logic_gate_simulation::component;
 
 import std::io;
@@ -112,6 +114,14 @@ fn int main(String[] args)
 
   component::connect(&event_queue, world.get_ref(3)!!, 0, world.get_ref(4)!!, 0);
 
+  List(<UIElement>) ui_elements;
+  ui_elements.new_init();
+  defer ui_elements.free();
+
+  ui_elements.push(&&sdl2_ui::new_button({10, 10}, "XNOR", fn () => {|
+    io::printn("XNOR");
+  |}).set_size({40, 20}));
+
   while (running)
   {
     /*
@@ -169,6 +179,10 @@ fn int main(String[] args)
           if (try Tuple(<usz, Point>) component = get_component_id_near_point(mouse_pos, &world))
           {
             event_queue.push({PRESSED, component.first, {.pos = component.second}});
+          }
+          else if (try UIElement* elem = get_ui_elem_near_point(mouse_pos, &ui_elements))
+          {
+            elem.on_click();
           }
 
         case event_type::MOUSEMOTION:
@@ -254,6 +268,18 @@ fn int main(String[] args)
 
     /*
      *
+     * Paint UI
+     *
+    */
+
+    // TODO: layering by using multiple arrays (ui_elements_0, ui_elements_1, etc)
+    foreach (elem : ui_elements)
+    {
+      elem.draw(renderer, offset);
+    }
+
+    /*
+     *
      * Show the frame and set 60 fps
      *
     */
@@ -288,27 +314,17 @@ fn Tuple(<usz, Point>)! get_component_id_near_point(Point point, WorldMap* world
   return ComponentFault.NONE_NEARBY?;
 }
 
-fn List(<Point>) get_wire_points(Point start, Point end)
+fn UIElement*! get_ui_elem_near_point(Point point, List(<UIElement>)* elems)
 {
-  List(<Point>) points;
-  points.new_init();
-
-  Point curr = start;
-
-  while (curr.x != end.x)
+  foreach (&val : elems)
   {
-    if (curr.x > end.x) curr.x --;
-    if (curr.x < end.x) curr.x ++;
+    Point key = val.get_pos();
+    Point dif = point - key;
+    if (val.is_clickable() && (dif).comp_ge({0, 0}) == {true, true} && (dif).comp_le(val.get_size()) == {true, true})
+    {
+      return val;
+    }
+  };
 
-    points.push(curr);
-  }
-  while (curr.y != end.y)
-  {
-    if (curr.y > end.y) curr.y --;
-    if (curr.y < end.y) curr.y ++;
-
-    points.push(curr);
-  }
-
-  return points;
+  return ComponentFault.NONE_NEARBY?;
 }
