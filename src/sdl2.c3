@@ -24,27 +24,28 @@ def SDLColor = char[<4>];
 def SDLRect = int[<4>];
 
 extern fn int init(int flags) @extern("SDL_Init");
-extern fn void quit() @extern("SDL_Quit");
+extern fn int quit() @extern("SDL_Quit");
 extern fn int ttf_init() @extern("TTF_Init");
-extern fn void ttf_quit() @extern("TTF_Quit");
+extern fn int ttf_quit() @extern("TTF_Quit");
 extern fn SDLWindow create_window(ZString title, int x, int y, int w, int h, uint flags) @extern("SDL_CreateWindow");
 extern fn SDLRenderer create_renderer(SDLWindow window, int unknown_1, int unknown_2) @extern("SDL_CreateRenderer");
 extern fn ZString get_error() @extern("SDL_GetError");
 extern fn bool poll_event(SDLEvent* event) @extern("SDL_PollEvent");
 extern fn void sdl_set_draw_color(SDLRenderer renderer, char r, char g, char b, char a) @extern("SDL_SetRenderDrawColor");
 extern fn int sdl_get_draw_color(SDLRenderer renderer, char* r, char* g, char* b, char* a) @extern("SDL_GetRenderDrawColor");
-extern fn void clear(SDLRenderer renderer) @extern("SDL_RenderClear");
-extern fn void present(SDLRenderer renderer) @extern("SDL_RenderPresent");
-extern fn void delay(uint ms) @extern("SDL_Delay");
-extern fn void destroy_window(SDLWindow window) @extern("SDL_DestroyWindow");
-extern fn void destroy_renderer(SDLRenderer renderer) @extern("SDL_DestroyRenderer");
-extern fn void fill_rect(SDLRenderer renderer, SDLRect *rectangle) @extern("SDL_RenderFillRect");
+extern fn int clear(SDLRenderer renderer) @extern("SDL_RenderClear");
+extern fn int present(SDLRenderer renderer) @extern("SDL_RenderPresent");
+extern fn int delay(uint ms) @extern("SDL_Delay");
+extern fn int destroy_window(SDLWindow window) @extern("SDL_DestroyWindow");
+extern fn int destroy_renderer(SDLRenderer renderer) @extern("SDL_DestroyRenderer");
+extern fn int fill_rect(SDLRenderer renderer, SDLRect *rectangle) @extern("SDL_RenderFillRect");
 extern fn SDLFont open_font(ZString name, int size) @extern("TTF_OpenFont");
 extern fn SDLSurface render_text_solid(SDLFont font, ZString text, SDLColor color) @extern("TTF_RenderText_Solid");
 extern fn SDLTexture create_texture_from_surface(SDLRenderer renderer, SDLSurface surface) @extern("SDL_CreateTextureFromSurface");
-extern fn void render_copy(SDLRenderer renderer, SDLTexture texture, SDLRect* crop, SDLRect* size_and_pos) @extern("SDL_RenderCopy");
-extern fn void free_surface(SDLSurface surface) @extern("SDL_FreeSurface");
-extern fn void destroy_texture(SDLTexture texture) @extern("SDL_DestroyTexture");
+extern fn int render_copy(SDLRenderer renderer, SDLTexture texture, SDLRect* crop, SDLRect* size_and_pos) @extern("SDL_RenderCopy");
+extern fn int free_surface(SDLSurface surface) @extern("SDL_FreeSurface");
+extern fn int destroy_texture(SDLTexture texture) @extern("SDL_DestroyTexture");
+extern fn int draw_line(SDLRenderer renderer, int x1, int y1, int x2, int y2) @extern("SDL_RenderDrawLine");
 // TODO rewatch https://www.youtube.com/watch?v=sLWkUzbMhIU as it shows how to make a library to incluse in c3 instead of linking with system library
 
 fn SDLColor get_draw_color(SDLRenderer renderer)

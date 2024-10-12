@@ -245,6 +245,11 @@ fn int main(String[] args)
     foreach (value : world.value_tlist())
     {
       value.draw(renderer, offset);
+
+      foreach (output : value.get_outputs())
+      {
+        draw_between_points(renderer, value.get_pos(), world.get(output.connected_id)!!.get_pos());
+      }
     };
 
     /*
@@ -258,10 +263,10 @@ fn int main(String[] args)
   return 0;
 }
 
-// fn void draw_between_points(Renderer renderer, Point start, Point end)
-// {
-//   sdl2::fill_rect(renderer, &&Rect {start.x, start.y, end.x - start.x + 2, end.y - start.y + 2});
-// }
+fn void draw_between_points(SDLRenderer renderer, Point start, Point end)
+{
+  sdl2::draw_line(renderer, ...start, ...end);
+}
 
 fault ComponentFault
 {
