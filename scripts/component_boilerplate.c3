@@ -11,6 +11,16 @@ fn int main(String[] args)
   String class_name = args[1];
 
   io::printfn(`
+fn Output[] %s.get_outputs(&self) @dynamic
+{
+  return &self.outputs;
+}
+
+fn Input[] %s.get_inputs(&self) @dynamic
+{
+  return &self.inputs;
+}
+
 fn Point %s.get_size(&self) @dynamic
 {
   return self.size;
@@ -29,7 +39,7 @@ fn usz %s.get_id(&self) @dynamic
 fn void %s.set_pos(&self, Point pos) @dynamic
 {
   self.pos = pos;
-}`, class_name, class_name, class_name, class_name);
+}`, class_name, class_name, class_name, class_name, class_name, class_name);
 
 
   return 0;

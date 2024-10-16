@@ -77,7 +77,7 @@ fn int main(String[] args)
       }
       else if (try Tuple(<usz, Point>) component = get_component_id_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
       {
-        event_queue.push({PRESSED, component.first, {.pos = component.second}});
+        event_queue.push(component::pressed_event(component.first,component.second));
       }
     }
     /*

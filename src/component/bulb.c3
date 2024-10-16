@@ -10,18 +10,18 @@ module logic_gate_simulation::component::bulb;
 */
 import raylib5::rl;
 
-import std::collections::list;
+
 
 const Point BULB_SIZE = {20, 20};
 
 fn Bulb new(EventQueue* event_queue, Point pos, usz id)
 {
-  return {{id, null}, event_queue, BULB_SIZE, false, pos, id};
+  return {{{id, null}}, event_queue, BULB_SIZE, false, pos, id};
 }
 
 struct Bulb (Component)
 {
-  Input main_input;
+  Input[1] inputs;
   EventQueue* event_queue;
   Point size;
   bool on;
@@ -36,26 +36,21 @@ fn void Bulb.handle_event(&self, GameEvent* event) @dynamic
     case POWER_STATE_CHANGE:
       self.recalculate_state();
     case CONNECTED_COMPONENT_REMOVED:
-      self.main_input.on = null;
+      self.inputs[0].on = null;
       self.recalculate_state();
     case PRESSED:
       break;
   }
 }
 
-fn Output*[] Bulb.get_outputs(&self) @dynamic
+fn Output[] Bulb.get_outputs(&self) @dynamic
 {
   return {};
 }
 
-fn Input*[] Bulb.get_inputs(&self) @dynamic
+fn Input[] Bulb.get_inputs(&self) @dynamic
 {
-  // return {&self.main_input};
-  // FIXME: this leaks memory
-  List(<Input*>) o;
-  o.new_init();
-  o.push(&self.main_input);
-  return o.array_view();
+  return &self.inputs;
 }
 
 fn Point Bulb.get_size(&self) @dynamic
@@ -65,9 +60,9 @@ fn Point Bulb.get_size(&self) @dynamic
 
 fn void Bulb.recalculate_state(&self)
 {
-  if (self.main_input.on != null)
+  if (self.inputs[0].on != null)
   {
-    self.on = *self.main_input.on;
+    self.on = *self.inputs[0].on;
   }
   else
   {
