@@ -8,7 +8,7 @@ module logic_gate_simulation::component::lever;
  *
  *
 */
-import sdl2;
+import raylib5::rl;
 
 import std::io;
 
@@ -68,13 +68,15 @@ fn Point Lever.get_size(&self) @dynamic
   return self.size;
 }
 
-fn void Lever.draw(&self, SDLRenderer renderer, Point offset) @dynamic
+fn void Lever.draw(&self) @dynamic
 {
   // fun compiler SIGSEV in c3 0.6.3
-  sdl2::set_draw_color(renderer, self.main_output.on ? {0xcc, 0x00, 0x00, 0xff} : {0xff, 0x00, 0x00, 0xff});
-  sdl2::fill_rect(renderer, &&SDLRect {self.pos.x - offset.x, self.pos.y - offset.y, self.size.x, self.size.y});
+  rl::drawRectangle(...self.pos, ...self.size, self.main_output.on ? {0xcc, 0x00, 0x00, 0xff} : {0xff, 0x00, 0x00, 0xff});
+  rl::drawText(self.main_output.on ? (ZString) "1" : (ZString) "0", ...self.pos + {4, 0}, 24, rl::BLACK);
+  // sdl2::set_draw_color(renderer, self.main_output.on ? {0xcc, 0x00, 0x00, 0xff} : {0xff, 0x00, 0x00, 0xff});
+  // sdl2::fill_rect(renderer, &&SDLRect {self.pos.x - offset.x, self.pos.y - offset.y, self.size.x, self.size.y});
 
-  sdl2::draw_text(renderer, self.main_output.on ? (ZString)"1\0" : (ZString)"0\0", {self.pos.x + LEVER_SIZE.x / 4 - offset.x, self.pos.y - offset.y}, {0, 0, 0, 0xff});
+  // sdl2::draw_text(renderer, self.main_output.on ? (ZString)"1\0" : (ZString)"0\0", {self.pos.x + LEVER_SIZE.x / 4 - offset.x, self.pos.y - offset.y}, {0, 0, 0, 0xff});
 }
 
 fn Point Lever.get_pos(&self) @dynamic
@@ -87,3 +89,7 @@ fn usz Lever.get_id(&self) @dynamic
   return self.id;
 }
 
+fn void Lever.set_pos(&self, Point pos) @dynamic
+{
+  self.pos = pos;
+}

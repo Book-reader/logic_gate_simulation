@@ -6,7 +6,7 @@
     // Directories where C3 library files may be found.
     "dependency-search-paths": [ "lib" ],
     // Libraries to use for all targets.
-    "dependencies": [ ],
+    "dependencies": ["raylib5", "raygui"],
     // Authors, optionally with email.
     "authors": [ "John Doe <john.doe@example.com>" ],
     // Version using semantic versioning.
@@ -26,7 +26,7 @@
         "electronics_game": {
             // Executable or library.
             "type": "executable",
-            "linked-libraries": ["SDL2", "SDL2_ttf"],
+            // "linked-libraries": ["SDL2", "SDL2_ttf"],
             // Additional libraries, sources
             // and overrides of global settings here.
         },

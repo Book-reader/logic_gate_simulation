@@ -8,7 +8,7 @@ module logic_gate_simulation::component::notgate;
  *
  *
 */
-import sdl2;
+//import sdl2;
 
 // TODO remove (hack that causes memory leak)
 import std::collections::list;
@@ -87,12 +87,12 @@ fn void Notgate.recalculate_state(&self)
   }
 }
 
-fn void Notgate.draw(&self, SDLRenderer renderer, Point offset) @dynamic
+fn void Notgate.draw(&self) @dynamic
 {
-  sdl2::set_draw_color(renderer, self.main_output.on ? {0x99, 0xff, 0x99, 0xff} : {0xff, 0x99, 0x99, 0xff});
-  sdl2::fill_rect(renderer, &&SDLRect {self.pos.x - offset.x, self.pos.y - offset.y, self.size.x, self.size.y});
+  // sdl2::set_draw_color(renderer, self.main_output.on ? {0x99, 0xff, 0x99, 0xff} : {0xff, 0x99, 0x99, 0xff});
+  // sdl2::fill_rect(renderer, &&SDLRect {self.pos.x - offset.x, self.pos.y - offset.y, self.size.x, self.size.y});
 
-  sdl2::draw_text(renderer, self.main_output.on ? (ZString)"1\0" : (ZString)"0\0", {self.pos.x + NOTGATE_SIZE.x / 4 - offset.x, self.pos.y - offset.y}, {0, 0, 0, 0xff});
+  // sdl2::draw_text(renderer, self.main_output.on ? (ZString)"1\0" : (ZString)"0\0", {self.pos.x + NOTGATE_SIZE.x / 4 - offset.x, self.pos.y - offset.y}, {0, 0, 0, 0xff});
 }
 
 fn Point Notgate.get_pos(&self) @dynamic
@@ -103,4 +103,9 @@ fn Point Notgate.get_pos(&self) @dynamic
 fn usz Notgate.get_id(&self) @dynamic
 {
   return self.id;
+}
+
+fn void Notgate.set_pos(&self, Point pos) @dynamic
+{
+  self.pos = pos;
 }

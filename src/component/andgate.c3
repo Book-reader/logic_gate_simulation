@@ -3,24 +3,24 @@ module logic_gate_simulation::component::andgate;
  *
  *
  *
- * AndGate definition
+ * Andgate definition
  *
  *
  *
 */
-import sdl2;
+//import sdl2;
 
 // TODO remove (hack that causes memory leak)
 import std::collections::list;
 
 const Point ANDGATE_SIZE = {20, 20};
 
-fn AndGate new(EventQueue* event_queue, Point pos, usz id)
+fn Andgate new(EventQueue* event_queue, Point pos, usz id)
 {
   return {{id, null}, {id, null}, {false, {0, 1}, 0}, event_queue, ANDGATE_SIZE, pos, id};
 }
 
-struct AndGate (Component)
+struct Andgate (Component)
 {
   Input left_input;
   Input right_input;
@@ -31,7 +31,7 @@ struct AndGate (Component)
   usz id;
 }
 
-fn void AndGate.handle_event(&self, GameEvent* event) @dynamic
+fn void Andgate.handle_event(&self, GameEvent* event) @dynamic
 {
   switch (event.type)
   {
@@ -52,7 +52,7 @@ fn void AndGate.handle_event(&self, GameEvent* event) @dynamic
   }
 }
 
-fn Output*[] AndGate.get_outputs(&self) @dynamic
+fn Output*[] Andgate.get_outputs(&self) @dynamic
 {
   // return {&self.main_output};
   List(<Output*>) o;
@@ -61,7 +61,7 @@ fn Output*[] AndGate.get_outputs(&self) @dynamic
   return o.array_view();
 }
 
-fn Input*[] AndGate.get_inputs(&self) @dynamic
+fn Input*[] Andgate.get_inputs(&self) @dynamic
 {
   // return {&self.left_input, &self.right_input};
   List(<Input*>) o;
@@ -71,12 +71,12 @@ fn Input*[] AndGate.get_inputs(&self) @dynamic
   return o.array_view();
 }
 
-fn Point AndGate.get_size(&self) @dynamic
+fn Point Andgate.get_size(&self) @dynamic
 {
   return self.size;
 }
 
-fn void AndGate.recalculate_state(&self)
+fn void Andgate.recalculate_state(&self)
 {
   if (self.left_input.on != null && self.right_input.on != null)
   {
@@ -93,20 +93,25 @@ fn void AndGate.recalculate_state(&self)
   }
 }
 
-fn void AndGate.draw(&self, SDLRenderer renderer, Point offset) @dynamic
+fn void Andgate.draw(&self) @dynamic
 {
-  sdl2::set_draw_color(renderer, self.main_output.on ? {0x99, 0xff, 0x99, 0xff} : {0xff, 0x99, 0x99, 0xff});
-  sdl2::fill_rect(renderer, &&SDLRect {self.pos.x - offset.x, self.pos.y - offset.y, self.size.x, self.size.y});
+  // sdl2::set_draw_color(renderer, self.main_output.on ? {0x99, 0xff, 0x99, 0xff} : {0xff, 0x99, 0x99, 0xff});
+  // sdl2::fill_rect(renderer, &&SDLRect {self.pos.x - offset.x, self.pos.y - offset.y, self.size.x, self.size.y});
 
-  sdl2::draw_text(renderer, self.main_output.on ? (ZString)"1\0" : (ZString)"0\0", {self.pos.x + ANDGATE_SIZE.x / 4 - offset.x, self.pos.y - offset.y}, {0, 0, 0, 0xff});
+  // sdl2::draw_text(renderer, self.main_output.on ? (ZString)"1\0" : (ZString)"0\0", {self.pos.x + ANDGATE_SIZE.x / 4 - offset.x, self.pos.y - offset.y}, {0, 0, 0, 0xff});
 }
 
-fn Point AndGate.get_pos(&self) @dynamic
+fn Point Andgate.get_pos(&self) @dynamic
 {
   return self.pos;
 }
 
-fn usz AndGate.get_id(&self) @dynamic
+fn usz Andgate.get_id(&self) @dynamic
 {
   return self.id;
+}
+
+fn void Andgate.set_pos(&self, Point pos) @dynamic
+{
+  self.pos = pos;
 }

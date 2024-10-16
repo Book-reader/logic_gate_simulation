@@ -2,7 +2,7 @@ module logic_gate_simulation::component;
 
 import logic_gate_simulation::queue;
 
-import sdl2;
+//import sdl2;
 
 import std::io;
 
@@ -70,14 +70,10 @@ interface Component
   fn Input*[] get_inputs();
   fn void handle_event(GameEvent* event);
   fn Point get_size();
-  fn void draw(SDLRenderer renderer, Point offset);
+  fn void draw();
   fn Point get_pos();
   fn usz get_id();
-
-  // TODO: some sort of rotation, this may not be needed.
-  // It would also likely be really complex to implement and update
-  // fn Rotation get_rotation();
-  // Rotation being an enum
+  fn void set_pos(Point pos);
 }
 
 // TODO: error detection

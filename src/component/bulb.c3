@@ -8,7 +8,7 @@ module logic_gate_simulation::component::bulb;
  *
  *
 */
-import sdl2;
+import raylib5::rl;
 
 import std::collections::list;
 
@@ -75,12 +75,10 @@ fn void Bulb.recalculate_state(&self)
   }
 }
 
-fn void Bulb.draw(&self, SDLRenderer renderer, Point offset) @dynamic
+fn void Bulb.draw(&self) @dynamic
 {
-  sdl2::set_draw_color(renderer, self.on ? {0xff, 0x00, 0xff, 0xff} : {0x00, 0x00, 0x00, 0xff});
-  sdl2::fill_rect(renderer, &&SDLRect {self.pos.x - offset.x, self.pos.y - offset.y, self.size.x, self.size.y});
-
-  sdl2::draw_text(renderer, self.on ? (ZString)"1\0" : (ZString)"0\0", {self.pos.x + BULB_SIZE.x / 4 - offset.x, self.pos.y - offset.y}, {0xff, 0xff, 0xff, 0xff});
+  rl::drawRectangle(...self.pos, ...self.size, self.on ? {0xff, 0x00, 0xff, 0xff} : {0x00, 0x00, 0x00, 0xff});
+  rl::drawText(self.on ? (ZString) "1" : (ZString) "0", ...self.pos + {4, 0}, 24, self.on ? {0x00, 0x00, 0x00, 0xff} : {0xff, 0xff, 0xff, 0xff});
 }
 
 fn Point Bulb.get_pos(&self) @dynamic
@@ -91,4 +89,9 @@ fn Point Bulb.get_pos(&self) @dynamic
 fn usz Bulb.get_id(&self) @dynamic
 {
   return self.id;
+}
+
+fn void Bulb.set_pos(&self, Point pos) @dynamic
+{
+  self.pos = pos;
 }

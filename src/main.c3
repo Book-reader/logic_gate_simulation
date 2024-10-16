@@ -1,10 +1,7 @@
 module logic_gate_simulation;
 
-import sdl2;
-import sdl2::event_type;
-import sdl2::scancode;
-
-import sdl2_ui;
+import raylib5;
+import raygui;
 
 import logic_gate_simulation::component;
 
@@ -26,76 +23,27 @@ bitstruct Modifiers : char
   bool ctrl : 2;
 }
 
+const Point SCREEN_SIZE = {800, 600};
+
 fn int main(String[] args)
 {
-  /*
-   *
-   * Initialize sdl2
-   *
-  */
-  if (sdl2::init(sdl2::INIT_EVERYTHING) < 0)
-  {
-    io::printfn("Failed to init SDL: %s", sdl2::get_error());
-    return 1;
-  }
-  defer sdl2::quit();
+  rl::initWindow(...SCREEN_SIZE, "Game Window");
+  defer rl::closeWindow();
+  rl::setTargetFPS(60);
 
-  if (sdl2::ttf_init() < 0)
-  {
-    io::printfn("Failed to init SDL_ttf: %s", sdl2::get_error());
-    return 1;
-  }
-  defer sdl2::ttf_quit();
-
-  /*
-   *
-   * Initialize the main window
-   *
-  */
-  SDLWindow window = sdl2::create_window("Game", 0, 0, 800, 600, 0);
-  defer sdl2::destroy_window(window);
-
-
-  if (!window)
-  {
-    io::printfn("Failed to open window: %s", sdl2::get_error());
-    return 1;
-  }
-
-  /*
-   *
-   * Initialize the renderer
-   *
-  */
-  SDLRenderer renderer = sdl2::create_renderer(window, -1, sdl2::render_flags::ACCELERATED);
-  defer sdl2::destroy_renderer(renderer);
-
-  if (!renderer)
-  {
-    io::printfn("Failed to create renderer: %s", sdl2::get_error());
-    return 1;
-  }
+  bool show_full_ui = false;
 
   /*
    *
    * Main game loop
    *
   */
-  SDLEvent sdl_event;
+  Camera2D camera;
+  camera.target = {0, 0};
+  camera.offset = {0, 0};
+  camera.rotation = 0;
+  camera.zoom = 1;
 
-  bool running = true;
-
-  List(<ushort>) key_buffer;
-  key_buffer.new_init();
-  defer key_buffer.free();
-  Modifiers modifiers;
-
-  bool pressing;
-
-
-  Point mouse_pos;
-  Point offset = {0, 0};
-  Point mouse_world_pos;
   WorldMap world;
   world.new_init();
   defer world.free();
@@ -106,7 +54,7 @@ fn int main(String[] args)
   world.set(++id_counter, &&lever::new(&event_queue, {100, 100}, id_counter));
   world.set(++id_counter, &&lever::new(&event_queue, {200, 100}, id_counter));
 
-  world.set(++id_counter, &&xnorgate::new(&event_queue, {150, 150}, id_counter));
+  world.set(++id_counter, &&xorgate::new(&event_queue, {150, 150}, id_counter));
   world.set(++id_counter, &&bulb::new(&event_queue, {150, 200}, id_counter));
 
   component::connect(&event_queue, world.get_ref(1)!!, 0, world.get_ref(3)!!, 0);
@@ -114,106 +62,24 @@ fn int main(String[] args)
 
   component::connect(&event_queue, world.get_ref(3)!!, 0, world.get_ref(4)!!, 0);
 
-  List(<UIElement>) ui_elements;
-  ui_elements.new_init();
-  defer ui_elements.free();
+  Component new_component;
 
-  ui_elements.push(&&sdl2_ui::new_button({10, 10}, "XNOR", fn () => {|
-    io::printn("XNOR");
-  |}).set_size({40, 20}));
-
-  while (running)
+  while (!rl::windowShouldClose())
   {
-    /*
-     *
-     * Handle events
-     *
-    */
-    while (sdl2::poll_event(&sdl_event))
+    rl::drawFPS(20, 20);
+    if (rl::isMouseButtonReleased(MouseButton.LEFT))
     {
-      switch (sdl_event.type)
+      Vector2 mouse_pos = rl::getMousePosition();
+      if (new_component != null)
       {
-        case event_type::QUIT:
-          running = false;
-        case event_type::KEYDOWN:
-          io::printfn("Keycode: %s", sdl_event.key.keysym.scancode);
-          switch (sdl_event.key.keysym.scancode) {
-            case scancode::LSHIFT:
-            case scancode::RSHIFT:
-              modifiers.shift = true;
-            case scancode::LCTRL:
-            case scancode::RCTRL:
-              modifiers.ctrl = true;
-
-            default:
-              if (!key_buffer.contains(sdl_event.key.keysym.scancode))
-              {
-                key_buffer.push(sdl_event.key.keysym.scancode);
-              }
-          }
-        case event_type::KEYUP:
-          switch (sdl_event.key.keysym.scancode) {
-            case scancode::LSHIFT:
-            case scancode::RSHIFT:
-              modifiers.shift = false;
-            case scancode::LCTRL:
-            case scancode::RCTRL:
-              modifiers.ctrl = false;
-
-            default:
-              key_buffer.remove_item(sdl_event.key.keysym.scancode);
-          }
-        case event_type::MOUSEBUTTONDOWN:
-          if (sdl_event.button.button == sdl2::mouse::BUTTON_LEFT)
-          {
-            pressing = true;
-          }
-          else if (sdl_event.button.button == sdl2::mouse::BUTTON_RIGHT)
-          {
-          }
-        case event_type::MOUSEBUTTONUP:
-          if (sdl_event.button.button == sdl2::mouse::BUTTON_LEFT)
-          {
-            pressing = false;
-          }
-          if (try Tuple(<usz, Point>) component = get_component_id_near_point(mouse_pos, &world))
-          {
-            event_queue.push({PRESSED, component.first, {.pos = component.second}});
-          }
-          else if (try UIElement* elem = get_ui_elem_near_point(mouse_pos, &ui_elements))
-          {
-            elem.on_click();
-          }
-
-        case event_type::MOUSEMOTION:
-          mouse_pos = {sdl_event.button.x, sdl_event.button.y};
-          mouse_world_pos = mouse_pos + offset;
-
-          if (pressing)
-          {
-            io::printfn("dragged left mouse!");
-          }
-        default:
+        world.set(id_counter, new_component);
+        new_component = null;
+      }
+      else if (try Tuple(<usz, Point>) component = get_component_id_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
+      {
+        event_queue.push({PRESSED, component.first, {.pos = component.second}});
       }
     }
-
-    /*
-     *
-     * Handle keys
-     *
-    */
-    foreach (key : key_buffer)
-    {
-      switch (key)
-      {
-        case scancode::ESCAPE:
-          running = false;
-        case scancode::SPACE:
-        case scancode::BACKSPACE:
-          break;
-      }
-    }
-
     /*
      *
      * Handle events
@@ -247,35 +113,56 @@ fn int main(String[] args)
      * Clear the background
      *
     */
-    sdl2::set_draw_color(renderer, {0xff, 0xff, 0xff, 0xff});
-    sdl2::clear(renderer);
+    rl::beginDrawing();
+    rl::clearBackground(rl::RAYWHITE);
 
     /*
      *
      * Paint main things
      *
     */
-
+    // Mode2D makes drawn things follow the camera
+    rl::beginMode2D(camera);
     foreach (value : world.value_tlist())
     {
-      value.draw(renderer, offset);
-
       foreach (output : value.get_outputs())
       {
-        draw_between_points(renderer, value.get_pos(), world.get(output.connected_id)!!.get_pos());
+        draw_between_points(value.get_pos(), world.get(output.connected_id)!!.get_pos());
       }
-    };
 
+      value.draw();
+    };
+    if (new_component != null)
+    {
+      Vector2 pos = rl::getMousePosition();
+      new_component.set_pos({(int)pos.x, (int)pos.y});
+      new_component.draw();
+    }
+
+    rl::endMode2D();
     /*
      *
      * Paint UI
      *
     */
 
-    // TODO: layering by using multiple arrays (ui_elements_0, ui_elements_1, etc)
-    foreach (elem : ui_elements)
+    rg::guiToggle({50, 20, 50, 20}, "new", &show_full_ui);
+
+    if (show_full_ui)
     {
-      elem.draw(renderer, offset);
+      if (rg::guiButton({110, 20, 50, 20}, "SWITCH"))
+      {
+        show_full_ui = false;
+        new_component = &&lever::new(&event_queue, {0, 0}, ++id_counter);
+      }
+      if (rg::guiButton({170, 20, 50, 20}, "LAMP"))
+      {
+        show_full_ui = false;
+      }
+      if (rg::guiButton({230, 20, 50, 20}, "AND"))
+      {
+        show_full_ui = false;
+      }
     }
 
     /*
@@ -283,15 +170,15 @@ fn int main(String[] args)
      * Show the frame and set 60 fps
      *
     */
-    sdl2::present(renderer);
-    sdl2::delay(16);
+    rl::endDrawing();
+
   }
   return 0;
 }
 
-fn void draw_between_points(SDLRenderer renderer, Point start, Point end)
+fn void draw_between_points(Point start, Point end)
 {
-  sdl2::draw_line(renderer, ...start, ...end);
+  rl::drawLineEx({start.x, start.y}, {end.x, end.y}, 2, rl::RED);
 }
 
 fault ComponentFault
@@ -314,17 +201,18 @@ fn Tuple(<usz, Point>)! get_component_id_near_point(Point point, WorldMap* world
   return ComponentFault.NONE_NEARBY?;
 }
 
-fn UIElement*! get_ui_elem_near_point(Point point, List(<UIElement>)* elems)
-{
-  foreach (&val : elems)
-  {
-    Point key = val.get_pos();
-    Point dif = point - key;
-    if (val.is_clickable() && (dif).comp_ge({0, 0}) == {true, true} && (dif).comp_le(val.get_size()) == {true, true})
-    {
-      return val;
-    }
-  };
+// fn UIElement*! get_ui_elem_near_point(Point point, List(<UIElement>)* elems)
+// {
+//   foreach (&val : elems)
+//   {
+//     Point key = val.get_pos();
+//     Point dif = point - key;
+//     if (val.is_visible() && val.is_clickable() && (dif).comp_ge({0, 0}) == {true, true} && (dif).comp_le(val.get_size()) == {true, true})
+//     {
+//       return val;
+//     }
+//   };
 
-  return ComponentFault.NONE_NEARBY?;
-}
+//   return ComponentFault.NONE_NEARBY?;
+// }
+
