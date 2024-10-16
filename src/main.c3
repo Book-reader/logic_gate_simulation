@@ -127,7 +127,10 @@ fn int main(String[] args)
     {
       foreach (output : value.get_outputs())
       {
-        draw_between_points(value.get_pos(), world.get(output.connected_id)!!.get_pos());
+        if (output.connected_id != 0)
+        {
+          draw_between_points(value.get_pos(), world.get(output.connected_id)!!.get_pos());
+        }
       }
 
       value.draw();
