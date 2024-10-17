@@ -16,13 +16,6 @@ import std::collections::tuple;
 def WorldMap = HashMap(<usz, Component>);
 usz id_counter = 0;
 
-bitstruct Modifiers : char
-{
-  bool shift : 0;
-  bool alt : 1;
-  bool ctrl : 2;
-}
-
 const Point SCREEN_SIZE = {800, 600};
 
 fn int main(String[] args)
@@ -123,17 +116,17 @@ fn int main(String[] args)
     */
     // Mode2D makes drawn things follow the camera
     rl::beginMode2D(camera);
-    foreach (value : world.value_tlist())
+    foreach (component : world.value_tlist())
     {
-      foreach (output : value.get_outputs())
+      foreach (output : component.get_outputs())
       {
         if (output.connected_id != 0)
         {
-          draw_between_points(value.get_pos(), world.get(output.connected_id)!!.get_pos());
+          draw_between_points(component.get_pos(), world.get(output.connected_id)!!.get_pos());
         }
       }
-
-      value.draw();
+      // io::printfn("id: %s", component.get_id());
+      component.draw();
     };
     if (new_component != null)
     {
@@ -149,22 +142,28 @@ fn int main(String[] args)
      *
     */
 
-    rg::guiToggle({50, 20, 50, 20}, "new", &show_full_ui);
+    rg::guiToggle({50, 20, 50, 20}, "NEW", &show_full_ui);
 
     if (show_full_ui)
     {
       if (rg::guiButton({110, 20, 50, 20}, "SWITCH"))
       {
         show_full_ui = false;
-        new_component = &&lever::new(&event_queue, {0, 0}, ++id_counter);
+        // new_component = &&lever::new(&event_queue, {0, 0}, ++id_counter);
+        // world.set(++id_counter, &&lever::new(&event_queue, {50 * (int)id_counter, 200}, id_counter));
       }
       if (rg::guiButton({170, 20, 50, 20}, "LAMP"))
       {
         show_full_ui = false;
+        // new_component = &&bulb::new(&event_queue, {0, 0}, ++id_counter);
+        // world.set(++id_counter, &&lever::new(&event_queue, {100, 300}, id_counter));
       }
       if (rg::guiButton({230, 20, 50, 20}, "AND"))
       {
         show_full_ui = false;
+        // new_component = &&andgate::new(&event_queue, {0, 0}, ++id_counter);
+        // world.set(++id_counter, &&lever::new(&event_queue, {100, 400}, id_counter));
+        // world.set(++id_counter, &&lever::new(&event_queue, {200, 400}, id_counter));
       }
     }
 
@@ -179,9 +178,9 @@ fn int main(String[] args)
   return 0;
 }
 
-fn void draw_between_points(Point start, Point end)
+fn void draw_between_points(Point start, Point end, Color color = rl::RED)
 {
-  rl::drawLineEx({start.x, start.y}, {end.x, end.y}, 2, rl::RED);
+  rl::drawLineEx({start.x, start.y}, {end.x, end.y}, 2, color);
 }
 
 fault ComponentFault
@@ -203,19 +202,3 @@ fn Tuple(<usz, Point>)! get_component_id_near_point(Point point, WorldMap* world
 
   return ComponentFault.NONE_NEARBY?;
 }
-
-// fn UIElement*! get_ui_elem_near_point(Point point, List(<UIElement>)* elems)
-// {
-//   foreach (&val : elems)
-//   {
-//     Point key = val.get_pos();
-//     Point dif = point - key;
-//     if (val.is_visible() && val.is_clickable() && (dif).comp_ge({0, 0}) == {true, true} && (dif).comp_le(val.get_size()) == {true, true})
-//     {
-//       return val;
-//     }
-//   };
-
-//   return ComponentFault.NONE_NEARBY?;
-// }
-

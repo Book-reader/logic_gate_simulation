@@ -8,9 +8,7 @@ module logic_gate_simulation::component::andgate;
  *
  *
 */
-//import sdl2;
-
-// TODO remove (hack that causes memory leak)
+import raylib5;
 
 
 const Point ANDGATE_SIZE = {20, 20};
@@ -78,6 +76,8 @@ fn void Andgate.recalculate_state(&self)
 
 fn void Andgate.draw(&self) @dynamic
 {
+  rl::drawRectangle(...self.pos, ...self.size, self.outputs[0].on ? {0x99, 0xff, 0x99, 0xff} : {0xff, 0x99, 0x99, 0xff});
+  rl::drawText(self.outputs[0].on ? (ZString) "1" : (ZString) "0", ...self.pos + {4, 0}, 24, rl::BLACK);
   // sdl2::set_draw_color(renderer, self.outputs[0].on ? {0x99, 0xff, 0x99, 0xff} : {0xff, 0x99, 0x99, 0xff});
   // sdl2::fill_rect(renderer, &&SDLRect {self.pos.x - offset.x, self.pos.y - offset.y, self.size.x, self.size.y});
 
