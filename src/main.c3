@@ -22,7 +22,7 @@ fn int main(String[] args)
 {
   rl::initWindow(...SCREEN_SIZE, "Game Window");
   defer rl::closeWindow();
-  rl::setTargetFPS(60);
+  // rl::setTargetFPS(60);
 
   bool show_full_ui = false;
 
@@ -44,11 +44,12 @@ fn int main(String[] args)
   event_queue.new_init();
   defer event_queue.free();
 
-  world.set(++id_counter, &&lever::new(&event_queue, {100, 100}, id_counter));
-  world.set(++id_counter, &&lever::new(&event_queue, {200, 100}, id_counter));
+  world.set(++id_counter, lever::new(&event_queue, {100, 100}, id_counter));
+  world.set(++id_counter, lever::new(&event_queue, {200, 100}, id_counter));
 
-  world.set(++id_counter, &&xorgate::new(&event_queue, {150, 150}, id_counter));
-  world.set(++id_counter, &&bulb::new(&event_queue, {150, 200}, id_counter));
+  // world.set(++id_counter, &&xorgate::new(&event_queue, {150, 150}, id_counter));
+  world.set(++id_counter, andgate::new(&event_queue, {150, 150}, id_counter));
+  world.set(++id_counter, bulb::new(&event_queue, {150, 200}, id_counter));
 
   component::connect(&event_queue, world.get_ref(1)!!, 0, world.get_ref(3)!!, 0);
   component::connect(&event_queue, world.get_ref(2)!!, 0, world.get_ref(3)!!, 1);
@@ -57,16 +58,17 @@ fn int main(String[] args)
 
   Component new_component;
 
+  Component test = lever::new(&event_queue, {20, 500}, 0);
+
   while (!rl::windowShouldClose())
   {
-    rl::drawFPS(20, 20);
     if (rl::isMouseButtonReleased(MouseButton.LEFT))
     {
       Vector2 mouse_pos = rl::getMousePosition();
-      if (new_component != null)
+      if (new_component.type != NONE)
       {
         world.set(id_counter, new_component);
-        new_component = null;
+        new_component.type = NONE;
       }
       else if (try Tuple(<usz, Point>) component = get_component_id_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
       {
@@ -78,6 +80,12 @@ fn int main(String[] args)
      * Handle events
      *
     */
+
+    // Stress test
+    for (int i = 0; i < 999; i++)
+    {
+      event_queue.push(component::pressed_event(1, {0, 0}));
+    }
 
     usz event_num = event_queue.len();
     for (int i = 0; i < event_num; i++)
@@ -91,7 +99,7 @@ fn int main(String[] args)
       {
         if (event.target_id != 0)
         {
-          world.get(event.target_id)!!.handle_event(&event);
+          world.get_ref(event.target_id)!!.handle_event(&event);
         }
         else
         {
@@ -127,8 +135,8 @@ fn int main(String[] args)
       }
       // io::printfn("id: %s", component.get_id());
       component.draw();
-    };
-    if (new_component != null)
+    }
+    if (new_component.type != NONE)
     {
       Vector2 pos = rl::getMousePosition();
       new_component.set_pos({(int)pos.x, (int)pos.y});
@@ -149,29 +157,26 @@ fn int main(String[] args)
       if (rg::guiButton({110, 20, 50, 20}, "SWITCH"))
       {
         show_full_ui = false;
-        // new_component = &&lever::new(&event_queue, {0, 0}, ++id_counter);
-        // world.set(++id_counter, &&lever::new(&event_queue, {50 * (int)id_counter, 200}, id_counter));
+        new_component = lever::new(&event_queue, {0, 0}, ++id_counter);
       }
       if (rg::guiButton({170, 20, 50, 20}, "LAMP"))
       {
         show_full_ui = false;
-        // new_component = &&bulb::new(&event_queue, {0, 0}, ++id_counter);
-        // world.set(++id_counter, &&lever::new(&event_queue, {100, 300}, id_counter));
+        new_component = bulb::new(&event_queue, {0, 0}, ++id_counter);
       }
       if (rg::guiButton({230, 20, 50, 20}, "AND"))
       {
         show_full_ui = false;
-        // new_component = &&andgate::new(&event_queue, {0, 0}, ++id_counter);
-        // world.set(++id_counter, &&lever::new(&event_queue, {100, 400}, id_counter));
-        // world.set(++id_counter, &&lever::new(&event_queue, {200, 400}, id_counter));
+        new_component = andgate::new(&event_queue, {0, 0}, ++id_counter);
       }
     }
 
     /*
      *
-     * Show the frame and set 60 fps
+     * Show the frame & fps counter
      *
     */
+    rl::drawFPS(0, 0);
     rl::endDrawing();
 
   }

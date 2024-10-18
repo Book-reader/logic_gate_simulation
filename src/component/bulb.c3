@@ -14,22 +14,23 @@ import raylib5::rl;
 
 const Point BULB_SIZE = {20, 20};
 
-fn Bulb new(EventQueue* event_queue, Point pos, usz id)
+// fn Bulb new(EventQueue* event_queue, Point pos, usz id)
+// {
+//   return {{{id, null}}, event_queue, BULB_SIZE, false, pos, id};
+// }
+
+fn Component new(EventQueue* event_queue, Point pos, usz id)
 {
-  return {{{id, null}}, event_queue, BULB_SIZE, false, pos, id};
+  return {pos, BULB_SIZE, event_queue, id, BULB, {.bulb = {{{id, null}}, false}}};
 }
 
-struct Bulb (Component)
+struct Bulb
 {
   Input[1] inputs;
-  EventQueue* event_queue;
-  Point size;
   bool on;
-  Point pos;
-  usz id;
 }
 
-fn void Bulb.handle_event(&self, GameEvent* event) @dynamic
+fn void Bulb.handle_event(&self, GameEvent* event, EventQueue* event_queue)
 {
   switch (event.type)
   {
@@ -43,19 +44,14 @@ fn void Bulb.handle_event(&self, GameEvent* event) @dynamic
   }
 }
 
-fn Output[] Bulb.get_outputs(&self) @dynamic
+fn Output[] Bulb.get_outputs(&self)
 {
   return {};
 }
 
-fn Input[] Bulb.get_inputs(&self) @dynamic
+fn Input[] Bulb.get_inputs(&self)
 {
   return &self.inputs;
-}
-
-fn Point Bulb.get_size(&self) @dynamic
-{
-  return self.size;
 }
 
 fn void Bulb.recalculate_state(&self)
@@ -70,23 +66,8 @@ fn void Bulb.recalculate_state(&self)
   }
 }
 
-fn void Bulb.draw(&self) @dynamic
+fn void Bulb.draw(&self, Point pos, Point size)
 {
-  rl::drawRectangle(...self.pos, ...self.size, self.on ? {0xff, 0x00, 0xff, 0xff} : {0x00, 0x00, 0x00, 0xff});
-  rl::drawText(self.on ? (ZString) "1" : (ZString) "0", ...self.pos + {4, 0}, 24, self.on ? {0x00, 0x00, 0x00, 0xff} : {0xff, 0xff, 0xff, 0xff});
-}
-
-fn Point Bulb.get_pos(&self) @dynamic
-{
-  return self.pos;
-}
-
-fn usz Bulb.get_id(&self) @dynamic
-{
-  return self.id;
-}
-
-fn void Bulb.set_pos(&self, Point pos) @dynamic
-{
-  self.pos = pos;
+  rl::drawRectangle(...pos, ...size, self.on ? {0xff, 0x00, 0xff, 0xff} : {0x00, 0x00, 0x00, 0xff});
+  rl::drawText(self.on ? (ZString) "1" : (ZString) "0", ...pos + {4, 0}, 24, self.on ? {0x00, 0x00, 0x00, 0xff} : {0xff, 0xff, 0xff, 0xff});
 }

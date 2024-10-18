@@ -90,16 +90,100 @@ fn void Output.disconnect_input(&self, Input* input)
 // Store the coordinates in the inputs and outputs,
 // return an array slice of them with get_inputs/outputs
 // then loop through them and read the coordinates to draw them
-interface Component
+struct Component
 {
-  fn Output[] get_outputs();
-  fn Input[] get_inputs();
-  fn void handle_event(GameEvent* event);
-  fn Point get_size();
-  fn void draw();
-  fn Point get_pos();
-  fn usz get_id();
-  fn void set_pos(Point pos);
+  // The things all components will have
+  Point pos;
+  Point size;
+  EventQueue* event_queue;
+  usz id;
+  // Functions unique to each component type (draw, handle_events, etc)
+  ComponentType type;
+  ComponentData data;
+}
+
+fn Point Component.get_pos(&self)
+{
+  return self.pos;
+}
+
+fn void Component.set_pos(&self, Point pos)
+{
+  self.pos = pos;
+}
+
+fn Point Component.get_size(&self)
+{
+  return self.size;
+}
+
+fn usz Component.get_id(&self)
+{
+  return self.id;
+}
+
+fn void Component.draw(&self)
+{
+  @execute(self, "draw", self.pos, self.size);
+}
+
+fn void Component.handle_event(&self, GameEvent* event)
+{
+  @execute(self, "handle_event", event, self.event_queue);
+}
+
+fn Output[] Component.get_outputs(&self)
+{
+  return @get(self, "outputs", Output[]{});
+}
+
+fn Input[] Component.get_inputs(&self)
+{
+  return @get(self, "inputs", Input[]{});
+}
+
+enum ComponentType : (String name)
+{
+  NONE = "none",
+  BULB = "bulb",
+  LEVER = "lever",
+  ANDGATE = "andgate"
+}
+
+union ComponentData
+{
+  Bulb bulb;
+  Lever lever;
+  Andgate andgate;
+}
+
+macro @execute(Component* component, #function_name, ...) @private
+{
+  $foreach ($member : ComponentType.values)
+    $if ($member != NONE):
+      if (component.type == $member)
+      {
+        return component.data.$eval($member.name).$eval(#function_name)($vasplat);
+      }
+    $endif
+  $endforeach
+}
+
+macro @get(Component* component, #value, #if_none) @private
+{
+  $foreach ($member : ComponentType.values)
+    $if ($member != NONE):
+      if (component.type == $member)
+      {
+        $if ($defined(component.data.$eval($member.name).$eval(#value))):
+          return &component.data.$eval($member.name).$eval(#value);
+        $else
+          return #if_none;
+        $endif
+      }
+    $endif
+  $endforeach
+  unreachable("@get: component type not in ComponentType (impossible)");
 }
 
 // TODO: error detection
@@ -112,22 +196,22 @@ fn void connect(EventQueue* event_queue, Component* out, usz out_id, Component* 
 // NOTE: IMPORTANT: the CONNECTED_COMPONENT_REMOVED event should be sent to both the input of 1 component and the output of the other component
 macro void connected_removed(self, GameEvent* event)
 {
-  $if($defined(self.inputs)):
-    foreach (&input : self.inputs)
-    {
-      if (input.parent_id == event.data.id)
-      {
-        input.on = null;
-      }
-    }
-  $endif
-  $if($defined(self.outputs)):
-    foreach (&output : self.outputs)
-    {
-      if (output.connected_id == event.data.id)
-      {
-        output.connected_id = 0;
-      }
-    }
-  $endif
+  // $if($defined(self.inputs)):
+  //   foreach (&input : self.inputs)
+  //   {
+  //     if (input.parent_id == event.data.id)
+  //     {
+  //       input.on = null;
+  //     }
+  //   }
+  // $endif
+  // $if($defined(self.outputs)):
+  //   foreach (&output : self.outputs)
+  //   {
+  //     if (output.connected_id == event.data.id)
+  //     {
+  //       output.connected_id = 0;
+  //     }
+  //   }
+  // $endif
 }
