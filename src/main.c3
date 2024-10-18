@@ -12,17 +12,33 @@ import std::collections::list;
 import std::collections::map;
 import std::collections::tuple;
 
+import std::thread;
+import std::time;
+
 // usz is id
 def WorldMap = HashMap(<usz, Component>);
 usz id_counter = 0;
 
 const Point SCREEN_SIZE = {800, 600};
 
+const MAX_TPS = 200;
+const Duration MIN_DELAY_US = (usz)1e6 / MAX_TPS;
+
+usz tps_avg @private;
+const TPS_SAMPLES @private = 10;
+
+WorldMap world @private;
+EventQueue event_queue @private;
+usz event_num @private;
+
+Mutex world_mutex;
+Mutex event_queue_mutex;
+
 fn int main(String[] args)
 {
   rl::initWindow(...SCREEN_SIZE, "Game Window");
   defer rl::closeWindow();
-  // rl::setTargetFPS(60);
+  rl::setTargetFPS(60);
 
   bool show_full_ui = false;
 
@@ -37,19 +53,38 @@ fn int main(String[] args)
   camera.rotation = 0;
   camera.zoom = 1;
 
-  WorldMap world;
   world.new_init();
   defer world.free();
-  EventQueue event_queue;
+
   event_queue.new_init();
   defer event_queue.free();
 
+  world_mutex.init()!!;
+  defer world_mutex.destroy()!!;
+  event_queue_mutex.init()!!;
+  defer event_queue_mutex.destroy()!!;
+
+  bool running = true;
+  Thread tick_thread;
+  if (catch error = tick_thread.create(&component_thread, &running))
+  {
+    io::printfn("Thread creation error: %s", error);
+  }
+  defer
+  {
+    running = false;
+    if (catch error = tick_thread.join()) io::printfn("Thread join error: %s", error);
+  }
+
+
+  world_mutex.lock()!!;
   world.set(++id_counter, lever::new(&event_queue, {100, 100}, id_counter));
   world.set(++id_counter, lever::new(&event_queue, {200, 100}, id_counter));
 
   // world.set(++id_counter, &&xorgate::new(&event_queue, {150, 150}, id_counter));
   world.set(++id_counter, andgate::new(&event_queue, {150, 150}, id_counter));
   world.set(++id_counter, bulb::new(&event_queue, {150, 200}, id_counter));
+  world_mutex.unlock()!!;
 
   component::connect(&event_queue, world.get_ref(1)!!, 0, world.get_ref(3)!!, 0);
   component::connect(&event_queue, world.get_ref(2)!!, 0, world.get_ref(3)!!, 1);
@@ -58,8 +93,6 @@ fn int main(String[] args)
 
   Component new_component;
 
-  Component test = lever::new(&event_queue, {20, 500}, 0);
-
   while (!rl::windowShouldClose())
   {
     if (rl::isMouseButtonReleased(MouseButton.LEFT))
@@ -67,7 +100,9 @@ fn int main(String[] args)
       Vector2 mouse_pos = rl::getMousePosition();
       if (new_component.type != NONE)
       {
+        world_mutex.lock()!!;
         world.set(id_counter, new_component);
+        world_mutex.unlock()!!;
         new_component.type = NONE;
       }
       else if (try Tuple(<usz, Point>) component = get_component_id_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
@@ -77,43 +112,9 @@ fn int main(String[] args)
     }
     /*
      *
-     * Handle events
-     *
-    */
-
-    // Stress test
-    for (int i = 0; i < 999; i++)
-    {
-      event_queue.push(component::pressed_event(1, {0, 0}));
-    }
-
-    usz event_num = event_queue.len();
-    for (int i = 0; i < event_num; i++)
-    {
-      GameEvent! event = event_queue.pop();
-      if (catch error = event)
-      {
-        io::printfn("ERROR: unable to handle event with message: %s", error);
-      }
-      else
-      {
-        if (event.target_id != 0)
-        {
-          world.get_ref(event.target_id)!!.handle_event(&event);
-        }
-        else
-        {
-          io::printfn("WARNING: found event without target, this is not implemented yet. type: %s", event.type);
-          // TODO: might will be used for deleting components
-        }
-      }
-    }
-
-    /*
-     *
      * Clear the background
      *
-    */
+      */
     rl::beginDrawing();
     rl::clearBackground(rl::RAYWHITE);
 
@@ -121,7 +122,7 @@ fn int main(String[] args)
      *
      * Paint main things
      *
-    */
+      */
     // Mode2D makes drawn things follow the camera
     rl::beginMode2D(camera);
     foreach (component : world.value_tlist())
@@ -148,7 +149,7 @@ fn int main(String[] args)
      *
      * Paint UI
      *
-    */
+      */
 
     rg::guiToggle({50, 20, 50, 20}, "NEW", &show_full_ui);
 
@@ -175,8 +176,17 @@ fn int main(String[] args)
      *
      * Show the frame & fps counter
      *
-    */
-    rl::drawFPS(0, 0);
+      */
+    rl::drawText(rl::textFormat("FPS: %d", rl::getFPS()), 0, 0, 20, rl::DARKGREEN);
+    // if (tps < 10000)
+    // {
+    rl::drawText(rl::textFormat("TPS: %d", tps_avg), 110, 0, 20, rl::DARKGREEN);
+    // }
+    // else
+    // {
+    //   rl::drawText(rl::textFormat("TPS: \u221E"), 110, 0, 20, rl::DARKGREEN);
+    // }
+    rl::drawText(rl::textFormat("Events this tick: %d", event_num), 230, 50, 20, rl::DARKGREEN);
     rl::endDrawing();
 
   }
@@ -206,4 +216,65 @@ fn Tuple(<usz, Point>)! get_component_id_near_point(Point point, WorldMap* world
   };
 
   return ComponentFault.NONE_NEARBY?;
+}
+
+usz spam;
+
+fn int component_thread(void* arg)
+{
+  while (*(bool*)arg)
+  {
+    Time start_time = time::now();
+    /*
+     *
+     * Handle events
+     *
+    */
+
+    event_queue_mutex.lock()!!;
+    // Stress test
+    for (int i = 0; i < spam / 10; i++)
+    {
+      event_queue.push(component::pressed_event(1, {0, 0}));
+    }
+    spam += 3;
+
+    event_num = event_queue.len();
+
+    for (int i = 0; i < event_num; i++)
+    {
+      GameEvent! event = event_queue.pop();
+      if (catch error = event)
+      {
+        io::printfn("ERROR: unable to handle event with message: %s", error);
+      }
+      else
+      {
+        if (event.target_id != 0)
+        {
+          world_mutex.lock()!!;
+          world.get_ref(event.target_id)!!.handle_event(&event);
+          world_mutex.unlock()!!;
+        }
+        else
+        {
+          io::printfn("WARNING: found event without target, this is not implemented yet. type: %s", event.type);
+          // TODO: might will be used for deleting components
+        }
+      }
+    }
+    event_queue_mutex.unlock()!!;
+
+    Time end_time = time::now();
+    Duration delta_time = end_time.diff_us(start_time);
+    // io::printfn("%s, %s, %s", delta_time, MIN_DELAY_US - delta_time, MIN_DELAY_US);
+
+    usz tps = MIN_DELAY_US - delta_time > 0 ? MAX_TPS : (usz)1e6 / (usz)delta_time;
+
+    tps_avg -= tps_avg / TPS_SAMPLES;
+    tps_avg += tps / TPS_SAMPLES;
+
+    thread::sleep(MIN_DELAY_US - delta_time > 0 ? MIN_DELAY_US - delta_time : 0);
+  }
+  return 0;
 }
