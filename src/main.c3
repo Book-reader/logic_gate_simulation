@@ -35,6 +35,8 @@ Mutex world_mutex;
 Mutex event_queue_mutex;
 
 bool do_spam;
+bool show_uncapped_tps;
+bool uncap_tps;
 
 fn int main(String[] args)
 {
@@ -185,6 +187,12 @@ fn int main(String[] args)
 
     rg::guiCheckBox({20, 40, 20, 20}, "Stress Test", &do_spam);
 
+    rg::guiCheckBox({20, 60, 20, 20}, "Show uncapped TPS", &show_uncapped_tps);
+    if (show_uncapped_tps)
+    {
+      rg::guiCheckBox({20, 80, 20, 20}, "Uncap TPS", &uncap_tps);
+    }
+
     /*
      *
      * Show the frame & fps counter
@@ -282,12 +290,23 @@ fn int component_thread(void* arg)
     Time end_time = time::now();
     Duration delta_time = end_time.diff_us(start_time);
 
-    usz tps = MIN_DELAY_US - delta_time > 0 ? MAX_TPS : (usz)1e6 / (usz)delta_time;
+    usz tps;
+    if (!show_uncapped_tps)
+    {
+      tps = MIN_DELAY_US - delta_time > 0 ? MAX_TPS : (usz)1e6 / (usz)delta_time;
+    }
+    else
+    {
+      tps = delta_time > 0 ? (usz)1e6 / (usz)delta_time : 10000000;
+    }
 
     tps_avg -= tps_avg / TPS_SAMPLES;
     tps_avg += tps / TPS_SAMPLES;
 
-    thread::sleep(MIN_DELAY_US - delta_time > 0 ? MIN_DELAY_US - delta_time : 0);
+    if (!uncap_tps)
+    {
+      thread::sleep(MIN_DELAY_US - delta_time > 0 ? MIN_DELAY_US - delta_time : 0);
+    }
   }
   return 0;
 }
