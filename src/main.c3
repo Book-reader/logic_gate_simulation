@@ -16,8 +16,8 @@ import std::thread;
 import std::time;
 
 // usz is id
-def WorldMap = HashMap(<usz, Component>);
-usz id_counter = 0;
+def WorldMap = HashMap(<Id, Component>);
+Id id_counter = 0;
 
 const Point SCREEN_SIZE = {800, 600};
 
@@ -78,8 +78,6 @@ fn int main(String[] args)
     if (catch error = tick_thread.join()) io::printfn("Thread join error: %s", error);
   }
 
-  io::printfn("%s, %s", Component.sizeof, ComponentData.sizeof);
-
   world_mutex.lock()!!;
   world.set(++id_counter, lever::new(&event_queue, {100, 100}, id_counter));
   world.set(++id_counter, lever::new(&event_queue, {200, 100}, id_counter));
@@ -119,7 +117,7 @@ fn int main(String[] args)
         world_mutex.unlock()!!;
         new_component.type = NONE;
       }
-      else if (try Tuple(<usz, Point>) component = get_component_id_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
+      else if (try Tuple(<Id, Point>) component = get_component_id_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
       {
         event_queue.push(component::pressed_event(component.first,component.second));
       }
@@ -211,7 +209,7 @@ fault ComponentFault
   NONE_NEARBY
 }
 
-fn Tuple(<usz, Point>)! get_component_id_near_point(Point point, WorldMap* world)
+fn Tuple(<Id, Point>)! get_component_id_near_point(Point point, WorldMap* world)
 {
   foreach (val : world.value_tlist())
   {

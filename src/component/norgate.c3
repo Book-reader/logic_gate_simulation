@@ -13,7 +13,7 @@ import raylib5;
 
 const Point NORGATE_SIZE = {20, 20};
 
-fn Component new(EventQueue* event_queue, Point pos, usz id)
+fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
   return {pos, NORGATE_SIZE, event_queue, id, NORGATE, {.norgate = {{{id, null}, {id, null}}, {{true, {0, 1}, 0}}}}};
 }

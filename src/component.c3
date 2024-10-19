@@ -4,6 +4,7 @@ import logic_gate_simulation::queue;
 
 def Point = int[<2>];
 def EventQueue = Queue(<GameEvent>);
+def Id = uint;
 
 fn uint int[<2>].hash(&self)
 {
@@ -13,28 +14,28 @@ fn uint int[<2>].hash(&self)
 struct GameEvent
 {
   EventType type;
-  usz target_id;
+  Id target_id;
   EventData data;
 }
 
-fn GameEvent power_change_event(usz target_id)
+fn GameEvent power_change_event(Id target_id)
 {
   return {POWER_STATE_CHANGE, target_id, {}};
 }
 
-fn GameEvent connected_removed_event(usz own_id, usz target_id)
+fn GameEvent connected_removed_event(Id own_id, Id target_id)
 {
   unreachable("TODO");
   // TODO
   // return {CONNECTED_COMPONENT_REMOVED, own_id};
 }
 
-fn GameEvent pressed_event(usz target_id, Point relative_coords)
+fn GameEvent pressed_event(Id target_id, Point relative_coords)
 {
   return {PRESSED, target_id, {.pos = relative_coords}};
 }
 
-enum EventType
+enum EventType : char
 {
   POWER_STATE_CHANGE,
   CONNECTED_COMPONENT_REMOVED,
@@ -45,14 +46,14 @@ enum EventType
 
 union EventData
 {
-  usz id;
+  Id id;
   uptr ptr;
   Point pos;
 }
 
 struct Input
 {
-  usz parent_id;
+  Id parent_id;
   bool* on;
 }
 
@@ -60,7 +61,7 @@ struct Output
 {
   bool on;
   Point position;
-  usz connected_id;
+  Id connected_id;
 }
 
 fn void Output.connect_input(&self, Input* input)
@@ -92,7 +93,7 @@ struct Component
   Point pos;
   Point size;
   EventQueue* event_queue;
-  usz id;
+  Id id;
   // Functions unique to each component type (draw, handle_events, etc)
   ComponentType type;
   ComponentData data;
@@ -113,7 +114,7 @@ fn Point Component.get_size(&self)
   return self.size;
 }
 
-fn usz Component.get_id(&self)
+fn Id Component.get_id(&self)
 {
   return self.id;
 }
@@ -225,7 +226,7 @@ macro @input_state(component_data; @body(bool[] outputs))
 }
 
 // TODO: error detection
-fn void connect(EventQueue* event_queue, Component* out, usz out_id, Component* in, usz in_id)
+fn void connect(EventQueue* event_queue, Component* out, Id out_id, Component* in, Id in_id)
 {
   out.get_outputs()[out_id].connect_input(&in.get_inputs()[in_id]);
   event_queue.push(power_change_event(in.get_id()));

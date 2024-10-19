@@ -14,7 +14,7 @@ import std::io;
 
 const Point LEVER_SIZE = {20, 20};
 
-fn Component new(EventQueue* event_queue, Point pos, usz id)
+fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
   return {pos, LEVER_SIZE, event_queue, id, LEVER, {.lever = {{{false, {0, 1}, 0}}}}};
 }

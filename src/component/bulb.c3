@@ -14,7 +14,7 @@ import raylib5::rl;
 
 const Point BULB_SIZE = {20, 20};
 
-fn Component new(EventQueue* event_queue, Point pos, usz id)
+fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
   return {pos, BULB_SIZE, event_queue, id, BULB, {.bulb = {{{id, null}}, false}}};
 }

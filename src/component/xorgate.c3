@@ -13,7 +13,7 @@ import raylib5;
 
 const Point XORGATE_SIZE = {20, 20};
 
-fn Component new(EventQueue* event_queue, Point pos, usz id)
+fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
   return {pos, XORGATE_SIZE, event_queue, id, XORGATE, {.xorgate = {{{id, null}, {id, null}}, {{false, {0, 1}, 0}}}}};
 }

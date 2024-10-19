@@ -13,7 +13,7 @@ import raylib5;
 
 const Point NOTGATE_SIZE = {20, 20};
 
-fn Component new(EventQueue* event_queue, Point pos, usz id)
+fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
   return {pos, NOTGATE_SIZE, event_queue, id, NOTGATE, {.notgate = {{{id, null}}, {{true, {0, 1}, 0}}}}};
 }
