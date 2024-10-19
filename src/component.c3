@@ -2,10 +2,6 @@ module logic_gate_simulation::component;
 
 import logic_gate_simulation::queue;
 
-//import sdl2;
-
-import std::io;
-
 def Point = int[<2>];
 def EventQueue = Queue(<GameEvent>);
 
@@ -147,7 +143,8 @@ enum ComponentType : (String name)
   NONE = "none",
   BULB = "bulb",
   LEVER = "lever",
-  ANDGATE = "andgate"
+  ANDGATE = "andgate",
+  ORGATE = "orgate"
 }
 
 union ComponentData
@@ -155,6 +152,7 @@ union ComponentData
   Bulb bulb;
   Lever lever;
   Andgate andgate;
+  Orgate orgate;
 }
 
 macro @execute(Component* component, #function_name, ...) @private
@@ -184,6 +182,38 @@ macro @get(Component* component, #value, #if_none) @private
     $endif
   $endforeach
   unreachable("@get: component type not in ComponentType (impossible)");
+}
+
+macro @input_state(component_data; @body(bool[] outputs))
+{
+  var $Type = $typeof(component_data);
+  var $type_name = "";
+  // Remove the * from the type name and bring to lower to match enum value
+  $if ($defined($Type.inner)):
+    $type_name = $Type.inner.nameof.temp_ascii_to_lower();
+  $else
+    $type_name = $Type.nameof.temp_ascii_to_lower();
+  $endif
+  $foreach ($member : ComponentType.values)
+    $if ($member != NONE):
+      if ($type_name == $member.name)
+      {
+        $if ($defined(component_data.inputs)):
+          bool[component_data.inputs.len] input_bools;
+          foreach (i, op : component_data.inputs)
+          {
+            if (op.on != null)
+            {
+              input_bools[i] = *op.on;
+            }
+          }
+          @body(&input_bools);
+        $else
+          unreachable("%s has not inputs", $typeof(component_data));
+        $endif
+      }
+    $endif
+  $endforeach
 }
 
 // TODO: error detection

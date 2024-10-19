@@ -1,11 +1,11 @@
 module logic_gate_simulation::queue(<Type>);
 
-import std::collections::list;
+import std::collections::linkedlist;
 
 // Wow, really putting in the effort to make a new data structure here.
 struct Queue
 {
-  List(<Type>) stuff;
+  LinkedList(<Type>) stuff;
 }
 
 fn void Queue.push(&self, Type element)
@@ -15,7 +15,7 @@ fn void Queue.push(&self, Type element)
 
 fn Type! Queue.pop(&self)
 {
-  return self.stuff.pop_first();;
+  return self.stuff.pop_front();
 }
 
 fn void Queue.new_init(&self)

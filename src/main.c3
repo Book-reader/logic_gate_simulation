@@ -34,6 +34,8 @@ usz event_num @private;
 Mutex world_mutex;
 Mutex event_queue_mutex;
 
+bool do_spam;
+
 fn int main(String[] args)
 {
   rl::initWindow(...SCREEN_SIZE, "Game Window");
@@ -79,17 +81,28 @@ fn int main(String[] args)
 
   world_mutex.lock()!!;
   world.set(++id_counter, lever::new(&event_queue, {100, 100}, id_counter));
-  world.set(++id_counter, lever::new(&event_queue, {200, 100}, id_counter));
+  // world.set(++id_counter, lever::new(&event_queue, {200, 100}, id_counter));
 
   // world.set(++id_counter, &&xorgate::new(&event_queue, {150, 150}, id_counter));
-  world.set(++id_counter, andgate::new(&event_queue, {150, 150}, id_counter));
-  world.set(++id_counter, bulb::new(&event_queue, {150, 200}, id_counter));
+  // world.set(++id_counter, orgate::new(&event_queue, {150, 150}, id_counter));
+
+  for (int i = 0; i < 10; i++)
+  {
+    world.set(++id_counter, orgate::new(&event_queue, {160 + (i * 25), 150}, id_counter));
+  }
+
+  // world.set(++id_counter, bulb::new(&event_queue, {150, 200}, id_counter));
   world_mutex.unlock()!!;
 
   component::connect(&event_queue, world.get_ref(1)!!, 0, world.get_ref(3)!!, 0);
   component::connect(&event_queue, world.get_ref(2)!!, 0, world.get_ref(3)!!, 1);
 
-  component::connect(&event_queue, world.get_ref(3)!!, 0, world.get_ref(4)!!, 0);
+  for (usz i = 2; i < 12; i++)
+  {
+    component::connect(&event_queue, world.get_ref(i - 1)!!, 0, world.get_ref(i)!!, 0);
+  }
+
+  // component::connect(&event_queue, world.get_ref(3)!!, 0, world.get_ref(4)!!, 0);
 
   Component new_component;
 
@@ -134,7 +147,6 @@ fn int main(String[] args)
           draw_between_points(component.get_pos(), world.get(output.connected_id)!!.get_pos());
         }
       }
-      // io::printfn("id: %s", component.get_id());
       component.draw();
     }
     if (new_component.type != NONE)
@@ -172,21 +184,16 @@ fn int main(String[] args)
       }
     }
 
+    rg::guiCheckBox({20, 40, 20, 20}, "Stress Test", &do_spam);
+
     /*
      *
      * Show the frame & fps counter
      *
       */
     rl::drawText(rl::textFormat("FPS: %d", rl::getFPS()), 0, 0, 20, rl::DARKGREEN);
-    // if (tps < 10000)
-    // {
-    rl::drawText(rl::textFormat("TPS: %d", tps_avg), 110, 0, 20, rl::DARKGREEN);
-    // }
-    // else
-    // {
-    //   rl::drawText(rl::textFormat("TPS: \u221E"), 110, 0, 20, rl::DARKGREEN);
-    // }
-    rl::drawText(rl::textFormat("Events this tick: %d", event_num), 230, 50, 20, rl::DARKGREEN);
+    rl::drawText(rl::textFormat("TPS: %d", tps_avg), 90, 0, 20, rl::DARKGREEN);
+    rl::drawText(rl::textFormat("Events this tick: %d", event_num), 200, 0, 20, rl::DARKGREEN);
     rl::endDrawing();
 
   }
@@ -233,11 +240,18 @@ fn int component_thread(void* arg)
 
     event_queue_mutex.lock()!!;
     // Stress test
-    for (int i = 0; i < spam / 10; i++)
+    if (do_spam)
     {
-      event_queue.push(component::pressed_event(1, {0, 0}));
+      for (int i = 0; i < spam; i++)
+      {
+        event_queue.push(component::pressed_event(1, {0, 0}));
+      }
+      spam += 1;
     }
-    spam += 3;
+    else
+    {
+      spam = 0;
+    }
 
     event_num = event_queue.len();
 
