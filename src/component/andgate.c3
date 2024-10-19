@@ -13,17 +13,12 @@ import raylib5;
 
 const Point ANDGATE_SIZE = {20, 20};
 
-// fn Andgate new(EventQueue* event_queue, Point pos, usz id)
-// {
-//   return {event_queue, ANDGATE_SIZE, pos, id};
-// }
-
 fn Component new(EventQueue* event_queue, Point pos, usz id)
 {
   return {pos, ANDGATE_SIZE, event_queue, id, ANDGATE, {.andgate = {{{id, null}, {id, null}}, {{false, {0, 1}, 0}}}}};
 }
 
-struct Andgate// (Component)
+struct Andgate
 {
   Input[2] inputs;
   Output[1] outputs;
@@ -74,8 +69,4 @@ fn void Andgate.draw(&self, Point pos, Point size)
 {
   rl::drawRectangle(...pos, ...size, self.outputs[0].on ? {0x99, 0xff, 0x99, 0xff} : {0xff, 0x99, 0x99, 0xff});
   rl::drawText(self.outputs[0].on ? (ZString) "1" : (ZString) "0", ...pos + {4, 0}, 24, rl::BLACK);
-  // sdl2::set_draw_color(renderer, self.outputs[0].on ? {0x99, 0xff, 0x99, 0xff} : {0xff, 0x99, 0x99, 0xff});
-  // sdl2::fill_rect(renderer, &&SDLRect {self.pos.x - offset.x, self.pos.y - offset.y, self.size.x, self.size.y});
-
-  // sdl2::draw_text(renderer, self.outputs[0].on ? (ZString)"1\0" : (ZString)"0\0", {self.pos.x + ANDGATE_SIZE.x / 4 - offset.x, self.pos.y - offset.y}, {0, 0, 0, 0xff});
 }

@@ -144,7 +144,11 @@ enum ComponentType : (String name)
   BULB = "bulb",
   LEVER = "lever",
   ANDGATE = "andgate",
-  ORGATE = "orgate"
+  ORGATE = "orgate",
+  NORGATE = "norgate",
+  NOTGATE = "notgate",
+  XNORGATE = "xnorgate",
+  XORGATE = "xorgate"
 }
 
 union ComponentData
@@ -153,6 +157,10 @@ union ComponentData
   Lever lever;
   Andgate andgate;
   Orgate orgate;
+  Norgate norgate;
+  Notgate notgate;
+  Xnorgate xnorgate;
+  Xorgate xorgate;
 }
 
 macro @execute(Component* component, #function_name, ...) @private

@@ -78,31 +78,32 @@ fn int main(String[] args)
     if (catch error = tick_thread.join()) io::printfn("Thread join error: %s", error);
   }
 
+  io::printfn("%s, %s", Component.sizeof, ComponentData.sizeof);
 
   world_mutex.lock()!!;
   world.set(++id_counter, lever::new(&event_queue, {100, 100}, id_counter));
-  // world.set(++id_counter, lever::new(&event_queue, {200, 100}, id_counter));
+  world.set(++id_counter, lever::new(&event_queue, {200, 100}, id_counter));
 
-  // world.set(++id_counter, &&xorgate::new(&event_queue, {150, 150}, id_counter));
-  // world.set(++id_counter, orgate::new(&event_queue, {150, 150}, id_counter));
+  world.set(++id_counter, norgate::new(&event_queue, {150, 150}, id_counter));
+  // world.set(++id_counter, norgate::new(&event_queue, {150, 150}, id_counter));
 
-  for (int i = 0; i < 10; i++)
-  {
-    world.set(++id_counter, orgate::new(&event_queue, {160 + (i * 25), 150}, id_counter));
-  }
+  // for (int i = 0; i < 10; i++)
+  // {
+  //   world.set(++id_counter, orgate::new(&event_queue, {160 + (i * 25), 150}, id_counter));
+  // }
 
-  // world.set(++id_counter, bulb::new(&event_queue, {150, 200}, id_counter));
+  world.set(++id_counter, bulb::new(&event_queue, {150, 200}, id_counter));
   world_mutex.unlock()!!;
 
   component::connect(&event_queue, world.get_ref(1)!!, 0, world.get_ref(3)!!, 0);
   component::connect(&event_queue, world.get_ref(2)!!, 0, world.get_ref(3)!!, 1);
 
-  for (usz i = 2; i < 12; i++)
-  {
-    component::connect(&event_queue, world.get_ref(i - 1)!!, 0, world.get_ref(i)!!, 0);
-  }
+  // for (usz i = 2; i < 12; i++)
+  // {
+  //   component::connect(&event_queue, world.get_ref(i - 1)!!, 0, world.get_ref(i)!!, 0);
+  // }
 
-  // component::connect(&event_queue, world.get_ref(3)!!, 0, world.get_ref(4)!!, 0);
+  component::connect(&event_queue, world.get_ref(3)!!, 0, world.get_ref(4)!!, 0);
 
   Component new_component;
 
@@ -127,7 +128,7 @@ fn int main(String[] args)
      *
      * Clear the background
      *
-      */
+    */
     rl::beginDrawing();
     rl::clearBackground(rl::RAYWHITE);
 
@@ -135,7 +136,7 @@ fn int main(String[] args)
      *
      * Paint main things
      *
-      */
+    */
     // Mode2D makes drawn things follow the camera
     rl::beginMode2D(camera);
     foreach (component : world.value_tlist())
@@ -161,7 +162,7 @@ fn int main(String[] args)
      *
      * Paint UI
      *
-      */
+    */
 
     rg::guiToggle({50, 20, 50, 20}, "NEW", &show_full_ui);
 
@@ -190,7 +191,7 @@ fn int main(String[] args)
      *
      * Show the frame & fps counter
      *
-      */
+    */
     rl::drawText(rl::textFormat("FPS: %d", rl::getFPS()), 0, 0, 20, rl::DARKGREEN);
     rl::drawText(rl::textFormat("TPS: %d", tps_avg), 90, 0, 20, rl::DARKGREEN);
     rl::drawText(rl::textFormat("Events this tick: %d", event_num), 200, 0, 20, rl::DARKGREEN);
@@ -253,6 +254,7 @@ fn int component_thread(void* arg)
       spam = 0;
     }
 
+    // TODO: some sort of automatic free for the event queue when the peak is really high and the curent average is really low
     event_num = event_queue.len();
 
     for (int i = 0; i < event_num; i++)
@@ -281,7 +283,6 @@ fn int component_thread(void* arg)
 
     Time end_time = time::now();
     Duration delta_time = end_time.diff_us(start_time);
-    // io::printfn("%s, %s, %s", delta_time, MIN_DELAY_US - delta_time, MIN_DELAY_US);
 
     usz tps = MIN_DELAY_US - delta_time > 0 ? MAX_TPS : (usz)1e6 / (usz)delta_time;
 
