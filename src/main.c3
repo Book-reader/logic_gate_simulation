@@ -15,7 +15,6 @@ import std::collections::tuple;
 import std::thread;
 import std::time;
 
-// usz is id
 def WorldMap = HashMap(<Id, Component>);
 Id id_counter = 0;
 
@@ -168,21 +167,14 @@ fn int main(String[] args)
 
     if (show_full_ui)
     {
-      if (rg::guiButton({110, 20, 50, 20}, "SWITCH"))
-      {
-        show_full_ui = false;
-        new_component = lever::new(&event_queue, {0, 0}, ++id_counter);
-      }
-      if (rg::guiButton({170, 20, 50, 20}, "LAMP"))
-      {
-        show_full_ui = false;
-        new_component = bulb::new(&event_queue, {0, 0}, ++id_counter);
-      }
-      if (rg::guiButton({230, 20, 50, 20}, "AND"))
-      {
-        show_full_ui = false;
-        new_component = andgate::new(&event_queue, {0, 0}, ++id_counter);
-      }
+      @new_button(0, "lever", show_full_ui, event_queue, new_component);
+      @new_button(1, "bulb", show_full_ui, event_queue, new_component);
+      @new_button(2, "and", show_full_ui, event_queue, new_component);
+      @new_button(3, "or", show_full_ui, event_queue, new_component);
+      @new_button(4, "not", show_full_ui, event_queue, new_component);
+      @new_button(5, "nor", show_full_ui, event_queue, new_component);
+      @new_button(6, "xor", show_full_ui, event_queue, new_component);
+      @new_button(7, "xnor", show_full_ui, event_queue, new_component);
     }
 
     rg::guiCheckBox({20, 40, 20, 20}, "Stress Test", &do_spam);
@@ -230,6 +222,19 @@ fn Tuple(<Id, Point>)! get_component_id_near_point(Point point, WorldMap* world)
   };
 
   return ComponentFault.NONE_NEARBY?;
+}
+
+macro void @new_button(int $idx, String $type, bool* &show_full_ui, EventQueue* &event_queue, Component* &new_component)
+{
+  if (rg::guiButton({(float)(110 + 60 * $idx), 20, 50, 20}, $type.temp_ascii_to_upper()))
+  {
+    *show_full_ui = false;
+    $if (!$defined($eval($type +++ "gate"))):
+      *new_component = $eval($type +++ "::new")(event_queue, {0, 0}, ++id_counter);
+    $else
+      *new_component = $eval($type +++ "gate::new")(event_queue, {0, 0}, ++id_counter);
+    $endif
+  }
 }
 
 usz spam;
