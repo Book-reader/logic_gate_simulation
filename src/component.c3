@@ -23,11 +23,9 @@ fn GameEvent power_change_event(Id target_id)
   return {POWER_STATE_CHANGE, target_id, {}};
 }
 
-fn GameEvent connected_removed_event(Id own_id, Id target_id)
+fn GameEvent removed_event(Id removed_id)
 {
-  unreachable("TODO");
-  // TODO
-  // return {CONNECTED_COMPONENT_REMOVED, own_id};
+  return {COMPONENT_REMOVED, 0, {.id = removed_id}};
 }
 
 fn GameEvent pressed_event(Id target_id, Point relative_coords)
@@ -38,7 +36,7 @@ fn GameEvent pressed_event(Id target_id, Point relative_coords)
 enum EventType : char
 {
   POWER_STATE_CHANGE,
-  CONNECTED_COMPONENT_REMOVED,
+  COMPONENT_REMOVED,
   // TODO
   // COMPONENT_CONNECTED,
   PRESSED
@@ -54,26 +52,27 @@ union EventData
 struct Input
 {
   Id parent_id;
-  bool* on;
+  Output* out;
 }
 
 struct Output
 {
   bool on;
   Point position;
-  Id connected_id;
+  Input* in;
+  Id parent_id;
 }
 
 fn void Output.connect_input(&self, Input* input)
 {
-  self.connected_id = input.parent_id;
-  input.on = &self.on;
+  self.in = input;
+  input.out = self;
 }
 
-fn void Output.disconnect_input(&self, Input* input)
+fn void Output.disconnect_input(&self)
 {
-  input.on = null;
-  self.connected_id = 0;
+  self.in.out = null;
+  self.in = null;
 }
 
 // TODO have some sort of relative coordinate system for the outputs and inputs
@@ -211,9 +210,9 @@ macro @input_state(component_data; @body(bool[] outputs))
           bool[component_data.inputs.len] input_bools;
           foreach (i, op : component_data.inputs)
           {
-            if (op.on != null)
+            if (op.out != null)
             {
-              input_bools[i] = *op.on;
+              input_bools[i] = op.out.on;
             }
           }
           @body(&input_bools);
@@ -231,26 +230,25 @@ fn void connect(EventQueue* event_queue, Component* out, Id out_id, Component* i
   out.get_outputs()[out_id].connect_input(&in.get_inputs()[in_id]);
   event_queue.push(power_change_event(in.get_id()));
 }
-
-// NOTE: IMPORTANT: the CONNECTED_COMPONENT_REMOVED event should be sent to both the input of 1 component and the output of the other component
+import std::io;
 macro void connected_removed(self, GameEvent* event)
 {
-  // $if($defined(self.inputs)):
-  //   foreach (&input : self.inputs)
-  //   {
-  //     if (input.parent_id == event.data.id)
-  //     {
-  //       input.on = null;
-  //     }
-  //   }
-  // $endif
-  // $if($defined(self.outputs)):
-  //   foreach (&output : self.outputs)
-  //   {
-  //     if (output.connected_id == event.data.id)
-  //     {
-  //       output.connected_id = 0;
-  //     }
-  //   }
-  // $endif
+  $if($defined(self.inputs)):
+    foreach (&input : self.inputs)
+    {
+      if (input.out != null && input.out.parent_id == event.data.id)
+      {
+        input.out.disconnect_input();
+      }
+    }
+  $endif
+  $if($defined(self.outputs)):
+    foreach (&output : self.outputs)
+    {
+      if (output.in != null && output.in.parent_id == event.data.id)
+      {
+        output.disconnect_input();
+      }
+    }
+  $endif;
 }

@@ -16,7 +16,7 @@ const Point LEVER_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
-  return {pos, LEVER_SIZE, event_queue, id, LEVER, {.lever = {{{false, {0, 1}, 0}}}}};
+  return {pos, LEVER_SIZE, event_queue, id, LEVER, {.lever = {{{false, {0, 1}, null, id}}}}};
 }
 
 struct Lever
@@ -28,15 +28,13 @@ fn void Lever.handle_event(&self, GameEvent* event, EventQueue* event_queue)
 {
   switch (event.type)
   {
+    case COMPONENT_REMOVED:
+      component::connected_removed(self, event);
     case PRESSED:
       self.outputs[0].on = !self.outputs[0].on;
-      if (self.outputs[0].connected_id != 0)
+      if (self.outputs[0].in != null)
       {
-        event_queue.push(component::power_change_event(self.outputs[0].connected_id));
-      }
-      else
-      {
-        io::printfn("not connected to anything");
+        event_queue.push(component::power_change_event(self.outputs[0].in.parent_id));
       }
     default:
   }

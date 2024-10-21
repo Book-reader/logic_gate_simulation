@@ -15,7 +15,7 @@ const Point ORGATE_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
-  return {pos, ORGATE_SIZE, event_queue, id, ORGATE, {.orgate = {{{id, null}, {id, null}}, {{false, {0, 1}, 0}}}}};
+  return {pos, ORGATE_SIZE, event_queue, id, ORGATE, {.orgate = {{{id, null}, {id, null}}, {{false, {0, 1}, null, id}}}}};
 }
 
 struct Orgate
@@ -30,7 +30,7 @@ fn void Orgate.handle_event(&self, GameEvent* event, EventQueue* event_queue)
   {
     case PRESSED:
       break;
-    case CONNECTED_COMPONENT_REMOVED:
+    case COMPONENT_REMOVED:
       component::connected_removed(self, event);
       nextcase;
     case POWER_STATE_CHANGE:
@@ -55,9 +55,9 @@ fn void Orgate.recalculate_state(&self, EventQueue* event_queue) @private
   {
     self.outputs[0].on = state[0] || state[1];
   };
-  if (old != self.outputs[0].on && self.outputs[0].connected_id != 0)
+  if (old != self.outputs[0].on && self.outputs[0].in != null)
   {
-    event_queue.push(component::power_change_event(self.outputs[0].connected_id));
+    event_queue.push(component::power_change_event(self.outputs[0].in.parent_id));
   }
 }
 

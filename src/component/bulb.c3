@@ -31,9 +31,8 @@ fn void Bulb.handle_event(&self, GameEvent* event, EventQueue* event_queue)
   {
     case POWER_STATE_CHANGE:
       self.recalculate_state();
-    case CONNECTED_COMPONENT_REMOVED:
-      self.inputs[0].on = null;
-      self.recalculate_state();
+    case COMPONENT_REMOVED:
+      component::connected_removed(self, event);
     case PRESSED:
       break;
   }
@@ -51,9 +50,9 @@ fn Input[] Bulb.get_inputs(&self)
 
 fn void Bulb.recalculate_state(&self)
 {
-  if (self.inputs[0].on != null)
+  if (self.inputs[0].out != null)
   {
-    self.on = *self.inputs[0].on;
+    self.on = self.inputs[0].out.on;
   }
   else
   {

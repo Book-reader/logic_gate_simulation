@@ -15,7 +15,7 @@ const Point ANDGATE_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
-  return {pos, ANDGATE_SIZE, event_queue, id, ANDGATE, {.andgate = {{{id, null}, {id, null}}, {{false, {0, 1}, 0}}}}};
+  return {pos, ANDGATE_SIZE, event_queue, id, ANDGATE, {.andgate = {{{id, null}, {id, null}}, {{false, {0, 1}, null, id}}}}};
 }
 
 struct Andgate
@@ -30,7 +30,7 @@ fn void Andgate.handle_event(&self, GameEvent* event, EventQueue* event_queue)
   {
     case PRESSED:
       break;
-    case CONNECTED_COMPONENT_REMOVED:
+    case COMPONENT_REMOVED:
       component::connected_removed(self, event);
       nextcase;
     case POWER_STATE_CHANGE:
@@ -50,13 +50,13 @@ fn Input[] Andgate.get_inputs(&self)
 
 fn void Andgate.recalculate_state(&self, EventQueue* event_queue) @private
 {
-  if (self.inputs[0].on != null && self.inputs[1].on != null)
+  if (self.inputs[0].out != null && self.inputs[1].out != null)
   {
     bool tmp = self.outputs[0].on;
-    self.outputs[0].on = *self.inputs[0].on && *self.inputs[1].on;
+    self.outputs[0].on = self.inputs[0].out.on && self.inputs[1].out.on;
     if (tmp != self.outputs[0].on)
     {
-      event_queue.push(component::power_change_event(self.outputs[0].connected_id));
+      event_queue.push(component::power_change_event(self.outputs[0].in.parent_id));
     }
   }
   else

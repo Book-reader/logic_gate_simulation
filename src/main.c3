@@ -44,6 +44,7 @@ fn int main(String[] args)
   rl::setTargetFPS(60);
 
   bool show_full_ui = false;
+  bool removing = false;
 
   /*
    *
@@ -83,24 +84,13 @@ fn int main(String[] args)
   world.set(++id_counter, lever::new(&event_queue, {100, 100}, id_counter));
   world.set(++id_counter, lever::new(&event_queue, {200, 100}, id_counter));
 
-  world.set(++id_counter, norgate::new(&event_queue, {150, 150}, id_counter));
-  // world.set(++id_counter, norgate::new(&event_queue, {150, 150}, id_counter));
-
-  // for (int i = 0; i < 10; i++)
-  // {
-  //   world.set(++id_counter, orgate::new(&event_queue, {160 + (i * 25), 150}, id_counter));
-  // }
+  world.set(++id_counter, xorgate::new(&event_queue, {150, 150}, id_counter));
 
   world.set(++id_counter, bulb::new(&event_queue, {150, 200}, id_counter));
   world_mutex.unlock()!!;
 
   component::connect(&event_queue, world.get_ref(1)!!, 0, world.get_ref(3)!!, 0);
   component::connect(&event_queue, world.get_ref(2)!!, 0, world.get_ref(3)!!, 1);
-
-  // for (usz i = 2; i < 12; i++)
-  // {
-  //   component::connect(&event_queue, world.get_ref(i - 1)!!, 0, world.get_ref(i)!!, 0);
-  // }
 
   component::connect(&event_queue, world.get_ref(3)!!, 0, world.get_ref(4)!!, 0);
 
@@ -120,7 +110,19 @@ fn int main(String[] args)
       }
       else if (try Tuple(<Id, Point>) component = get_component_id_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
       {
-        event_queue.push(component::pressed_event(component.first,component.second));
+        if (!removing)
+        {
+          event_queue.push(component::pressed_event(component.first,component.second));
+        }
+        else
+        {
+          event_queue.push(component::removed_event(component.first));
+          removing = false;
+        }
+      }
+      else if (removing)
+      {
+        removing = false;
       }
     }
     /*
@@ -142,9 +144,9 @@ fn int main(String[] args)
     {
       foreach (output : component.get_outputs())
       {
-        if (output.connected_id != 0)
+        if (output.in != null)
         {
-          draw_between_points(component.get_pos(), world.get(output.connected_id)!!.get_pos());
+          draw_between_points(component.get_pos(), world.get(output.in.parent_id)!!.get_pos());
         }
       }
       component.draw();
@@ -175,6 +177,11 @@ fn int main(String[] args)
       @new_button(5, "nor", show_full_ui, event_queue, new_component);
       @new_button(6, "xor", show_full_ui, event_queue, new_component);
       @new_button(7, "xnor", show_full_ui, event_queue, new_component);
+      removing = false;
+    }
+    else
+    {
+      rg::guiToggle({110, 20, 50, 20}, "REMOVE", &removing);
     }
 
     rg::guiCheckBox({20, 40, 20, 20}, "Stress Test", &do_spam);
@@ -285,8 +292,16 @@ fn int component_thread(void* arg)
         }
         else
         {
-          io::printfn("WARNING: found event without target, this is not implemented yet. type: %s", event.type);
-          // TODO: might will be used for deleting components
+          world_mutex.lock()!!;
+          foreach (id : world.tcopy_keys())
+          {
+            world.get_ref(id)!!.handle_event(&event);
+          }
+          if (event.type == COMPONENT_REMOVED)
+          {
+            world.remove(event.data.id);
+          }
+          world_mutex.unlock()!!;
         }
       }
     }
