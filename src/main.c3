@@ -106,6 +106,22 @@ fn int main(String[] args)
         {
           event_queue.push(component::removed_event(component.first));
         }
+        else if(try Tuple(<Id, usz>) component = get_component_input_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
+        {
+          Input* in = &world.get_ref(component.first)!!.get_inputs()[component.second];
+          if (in.out != null)
+          {
+            in.out.disconnect_input();
+          }
+        }
+        else if(try Tuple(<Id, usz>) component = get_component_output_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
+        {
+          Output* out = &world.get_ref(component.first)!!.get_outputs()[component.second];
+          if (out.in != null)
+          {
+            out.disconnect_input();
+          }
+        }
         removing = false;
       }
       else if (new_connection_from.first != 0)

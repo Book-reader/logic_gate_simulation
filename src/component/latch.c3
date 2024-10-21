@@ -15,7 +15,7 @@ const Point LATCH_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
-  return {pos, LATCH_SIZE, event_queue, id, LATCH, {.latch = {{component::new_input(id)}, {component::new_output(id, {0, 1}, false)}}}};
+  return {pos, LATCH_SIZE, event_queue, id, LATCH, {.latch = {{component::new_input(id)}, {component::new_output(id, {LATCH_SIZE.x, 0}, false)}}}};
 }
 
 struct Latch
