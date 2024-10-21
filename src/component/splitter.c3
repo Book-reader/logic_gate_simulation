@@ -15,7 +15,7 @@ const Point SPLITTER_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
-  return {pos, SPLITTER_SIZE, event_queue, id, SPLITTER, {.splitter = {{component::new_input(id)}, {component::new_output(id, {0, 1}, false), component::new_output(id, {0, 1}, false), component::new_output(id, {0, 1}, false)}}}};
+  return {pos, SPLITTER_SIZE, event_queue, id, SPLITTER, {.splitter = {{component::new_input(id, {SPLITTER_SIZE.x / 2, -component::INPUT_SIZE.y})}, {component::new_output(id, {-component::INPUT_SIZE.x, SPLITTER_SIZE.y / 2}, false), component::new_output(id, {SPLITTER_SIZE.x, SPLITTER_SIZE.y / 2}, false), component::new_output(id, {SPLITTER_SIZE.x / 2, SPLITTER_SIZE.y}, false)}}}};
 }
 
 struct Splitter

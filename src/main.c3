@@ -87,6 +87,7 @@ fn int main(String[] args)
 
   Component new_component;
 
+  // TODO: fix strange issues when connecting components
   while (!rl::windowShouldClose())
   {
     if (rl::isMouseButtonReleased(MouseButton.LEFT))
@@ -270,7 +271,7 @@ fn Tuple(<Id, Point>)! get_component_id_near_point(Point point, WorldMap* world,
   {
     Point key = val.get_pos();
     Point diff = point - key;
-    if (diff.comp_ge({0, 0} - val.get_size() * tolerance) == {true, true} && diff.comp_le(val.get_size() + val.get_size() * tolerance) == {true, true})
+    if (diff.comp_ge({0, 0} - (val.get_size() * tolerance)) == {true, true} && diff.comp_le(val.get_size() + (val.get_size() * tolerance)) == {true, true})
     {
       return {val.get_id(), diff};
     }
@@ -280,7 +281,7 @@ fn Tuple(<Id, Point>)! get_component_id_near_point(Point point, WorldMap* world,
 
 fn Tuple(<Id, usz>)! get_component_input_near_point(Point point, WorldMap* world)
 {
-  if (try Tuple(<Id, Point>) result = get_component_id_near_point(point, world, 2))
+  if (try Tuple(<Id, Point>) result = get_component_id_near_point(point, world, 1))
   {
     foreach (id, &input : world.get_ref(result.first)!!.get_inputs())
     {
@@ -296,7 +297,7 @@ fn Tuple(<Id, usz>)! get_component_input_near_point(Point point, WorldMap* world
 
 fn Tuple(<Id, usz>)! get_component_output_near_point(Point point, WorldMap* world)
 {
-  if (try Tuple(<Id, Point>) result = get_component_id_near_point(point, world, 2))
+  if (try Tuple(<Id, Point>) result = get_component_id_near_point(point, world, 1))
   {
     foreach (id, &output : world.get_ref(result.first)!!.get_outputs())
     {
