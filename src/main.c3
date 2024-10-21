@@ -183,7 +183,7 @@ fn int main(String[] args)
     if (new_connection_from.first != 0)
     {
       Vector2 mouse_pos = rl::getMousePosition();
-      draw_between_points(world.get_ref(new_connection_from.first)!!.get_pos(), {(int)mouse_pos.x, (int)mouse_pos.y});
+      draw_between_points(world.get_ref(new_connection_from.first)!!.get_pos() + world.get_ref(new_connection_from.first)!!.get_outputs()[new_connection_from.second].position, {(int)mouse_pos.x, (int)mouse_pos.y});
     }
 
     rl::endMode2D();
