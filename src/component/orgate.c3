@@ -11,7 +11,7 @@ module logic_gate_simulation::component::orgate;
 import raylib5;
 
 
-const Point ORGATE_SIZE = {20, 20};
+const PointSmall ORGATE_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {

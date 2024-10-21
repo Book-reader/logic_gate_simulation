@@ -64,6 +64,15 @@ fn int main(String[] args)
   event_queue.new_init();
   defer event_queue.free();
 
+  // io::printfn("%s: %s", Component.nameof, Component.sizeof);
+  // io::printfn("%s: %s", ComponentData.nameof, ComponentData.sizeof);
+  // $foreach ($member : ComponentData.membersof)
+  //   io::printfn("%s: %s", $member.nameof, $member.sizeof);
+  // $endforeach
+  // io::printfn("%s: %s", Input.nameof, Input.sizeof);
+  // io::printfn("%s: %s", Output.nameof, Output.sizeof);
+  // io::printfn("%s: %s", Point.nameof, Point.sizeof);
+
   world_mutex.init()!!;
   defer world_mutex.destroy()!!;
   event_queue_mutex.init()!!;
@@ -176,19 +185,19 @@ fn int main(String[] args)
       {
         if (output.in != null)
         {
-          draw_between_points(component.get_pos() + output.position, world.get(output.in.parent_id)!!.get_pos() + output.in.position);
+          draw_between_points(component.get_pos() + (Point)output.position, world.get(output.in.parent_id)!!.get_pos() + (Point)output.in.position);
         }
       }
       component.draw();
       foreach (input : component.get_inputs())
       {
-        rl::drawRectangle(...(component.get_pos() + input.position - 1), ...component::INPUT_SIZE + 2, rl::BLACK);
-        rl::drawRectangle(...(component.get_pos() + input.position), ...component::INPUT_SIZE, rl::GREEN);
+        rl::drawRectangle(...(component.get_pos() + (Point)input.position - 1), ...component::INPUT_SIZE + 2, rl::BLACK);
+        rl::drawRectangle(...(component.get_pos() + (Point)input.position), ...component::INPUT_SIZE, rl::GREEN);
       }
       foreach (output : component.get_outputs())
       {
-        rl::drawRectangle(...(component.get_pos() + output.position - 1), ...component::OUTPUT_SIZE + 2, rl::BLACK);
-        rl::drawRectangle(...(component.get_pos() + output.position), ...component::OUTPUT_SIZE, rl::YELLOW);
+        rl::drawRectangle(...(component.get_pos() + (Point)output.position - 1), ...component::OUTPUT_SIZE + 2, rl::BLACK);
+        rl::drawRectangle(...(component.get_pos() + (Point)output.position), ...component::OUTPUT_SIZE, rl::YELLOW);
       }
     }
     if (new_component.type != NONE)
@@ -200,7 +209,7 @@ fn int main(String[] args)
     if (new_connection_from.first != 0)
     {
       Vector2 mouse_pos = rl::getMousePosition();
-      draw_between_points(world.get_ref(new_connection_from.first)!!.get_pos() + world.get_ref(new_connection_from.first)!!.get_outputs()[new_connection_from.second].position, {(int)mouse_pos.x, (int)mouse_pos.y});
+      draw_between_points(world.get_ref(new_connection_from.first)!!.get_pos() + (Point)world.get_ref(new_connection_from.first)!!.get_outputs()[new_connection_from.second].position, {(int)mouse_pos.x, (int)mouse_pos.y});
     }
 
     rl::endMode2D();
@@ -285,7 +294,7 @@ fn Tuple(<Id, usz>)! get_component_input_near_point(Point point, WorldMap* world
   {
     foreach (id, &input : world.get_ref(result.first)!!.get_inputs())
     {
-      Point diff = result.second - input.position;
+      Point diff = result.second - (Point)input.position;
       if (diff.comp_ge({0, 0}) == {true, true} && diff.comp_le(component::INPUT_SIZE) == {true, true})
       {
         return {result.first, id};
@@ -301,7 +310,7 @@ fn Tuple(<Id, usz>)! get_component_output_near_point(Point point, WorldMap* worl
   {
     foreach (id, &output : world.get_ref(result.first)!!.get_outputs())
     {
-      Point diff = result.second - output.position;
+      Point diff = result.second - (Point)output.position;
       if (diff.comp_ge({0, 0}) == {true, true} && diff.comp_le(component::OUTPUT_SIZE) == {true, true})
       {
         return {result.first, id};

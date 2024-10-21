@@ -11,7 +11,7 @@ module logic_gate_simulation::component::latch;
 import raylib5;
 
 
-const Point LATCH_SIZE = {20, 20};
+const PointSmall LATCH_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {

@@ -11,7 +11,7 @@ module logic_gate_simulation::component::notgate;
 import raylib5;
 
 
-const Point NOTGATE_SIZE = {20, 20};
+const PointSmall NOTGATE_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {

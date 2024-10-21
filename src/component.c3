@@ -2,10 +2,11 @@ module logic_gate_simulation::component;
 
 import logic_gate_simulation::queue;
 
-const Point INPUT_SIZE = {5, 5};
-const Point OUTPUT_SIZE = {5, 5};
+const PointSmall INPUT_SIZE = {5, 5};
+const PointSmall OUTPUT_SIZE = {5, 5};
 
 def Point = int[<2>];
+def PointSmall = short[<2>];
 def EventQueue = Queue(<GameEvent>);
 def Id = uint;
 def Splitter = splitter::Splitter;
@@ -49,7 +50,7 @@ enum EventType : char
 union EventData
 {
   Id id;
-  uptr ptr;
+  // uptr ptr;
   Point pos;
 }
 
@@ -57,13 +58,13 @@ struct Input
 {
   Id parent_id;
   Output* out;
-  Point position;
+  PointSmall position;
 }
 
 struct Output
 {
   bool on;
-  Point position;
+  PointSmall position;
   Input* in;
   Id parent_id;
 }
@@ -80,12 +81,12 @@ fn void Output.disconnect_input(&self)
   self.in = null;
 }
 
-fn Input new_input(Id id, Point pos = {0, 0})
+fn Input new_input(Id id, PointSmall pos = {0, 0})
 {
   return {id, null, pos};
 }
 
-fn Output new_output(Id id, Point pos, bool on)
+fn Output new_output(Id id, PointSmall pos, bool on)
 {
   return {on, pos, null, id};
 }
@@ -105,7 +106,7 @@ struct Component
 {
   // The things all components will have
   Point pos;
-  Point size;
+  PointSmall size;
   EventQueue* event_queue;
   Id id;
   // Functions unique to each component type (draw, handle_events, etc)
@@ -251,7 +252,7 @@ fn void connect(EventQueue* event_queue, Component* out, Id out_id, Component* i
   out.get_outputs()[out_id].connect_input(&in.get_inputs()[in_id]);
   event_queue.push(power_change_event(in.get_id()));
 }
-import std::io;
+
 macro void connected_removed(self, GameEvent* event)
 {
   $if($defined(self.inputs)):

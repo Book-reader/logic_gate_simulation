@@ -12,7 +12,7 @@ import raylib5::rl;
 
 import std::io;
 
-const Point LEVER_SIZE = {20, 20};
+const PointSmall LEVER_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {

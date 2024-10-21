@@ -11,7 +11,7 @@ module logic_gate_simulation::component::pulse;
 import raylib5;
 
 
-const Point PULSE_SIZE = {20, 20};
+const PointSmall PULSE_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {

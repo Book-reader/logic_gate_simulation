@@ -12,7 +12,7 @@ import raylib5::rl;
 
 
 
-const Point BULB_SIZE = {20, 20};
+const PointSmall BULB_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {

@@ -11,7 +11,7 @@ module logic_gate_simulation::component::norgate;
 import raylib5;
 
 
-const Point NORGATE_SIZE = {20, 20};
+const PointSmall NORGATE_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
