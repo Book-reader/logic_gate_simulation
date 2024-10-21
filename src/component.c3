@@ -2,9 +2,13 @@ module logic_gate_simulation::component;
 
 import logic_gate_simulation::queue;
 
+const Point INPUT_SIZE = {5, 5};
+const Point OUTPUT_SIZE = {5, 5};
+
 def Point = int[<2>];
 def EventQueue = Queue(<GameEvent>);
 def Id = uint;
+def Splitter = splitter::Splitter;
 
 fn uint int[<2>].hash(&self)
 {
@@ -53,6 +57,7 @@ struct Input
 {
   Id parent_id;
   Output* out;
+  Point position;
 }
 
 struct Output
@@ -73,6 +78,16 @@ fn void Output.disconnect_input(&self)
 {
   self.in.out = null;
   self.in = null;
+}
+
+fn Input new_input(Id id, Point pos = {0, 0})
+{
+  return {id, null, pos};
+}
+
+fn Output new_output(Id id, Point pos, bool on)
+{
+  return {on, pos, null, id};
 }
 
 // TODO have some sort of relative coordinate system for the outputs and inputs
@@ -148,7 +163,10 @@ enum ComponentType : (String name)
   NORGATE = "norgate",
   NOTGATE = "notgate",
   XNORGATE = "xnorgate",
-  XORGATE = "xorgate"
+  XORGATE = "xorgate",
+  SPLITTER = "splitter",
+  LATCH = "latch",
+  PULSE = "pulse"
 }
 
 union ComponentData
@@ -161,6 +179,9 @@ union ComponentData
   Notgate notgate;
   Xnorgate xnorgate;
   Xorgate xorgate;
+  Splitter splitter;
+  Latch latch;
+  Pulse pulse;
 }
 
 macro @execute(Component* component, #function_name, ...) @private

@@ -15,7 +15,7 @@ const Point XORGATE_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
-  return {pos, XORGATE_SIZE, event_queue, id, XORGATE, {.xorgate = {{{id, null}, {id, null}}, {{false, {0, 1}, null, id}}}}};
+  return {pos, XORGATE_SIZE, event_queue, id, XORGATE, {.xorgate = {{component::new_input(id, {0, 0}), component::new_input(id, {XORGATE_SIZE.x, 0})}, {component::new_output(id, {XORGATE_SIZE.x / 2, XORGATE_SIZE.y}, false)}}}};
 }
 
 struct Xorgate

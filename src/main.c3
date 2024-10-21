@@ -45,6 +45,7 @@ fn int main(String[] args)
 
   bool show_full_ui = false;
   bool removing = false;
+  Tuple(<Id, usz>) new_connection_from = {};
 
   /*
    *
@@ -82,17 +83,7 @@ fn int main(String[] args)
 
   world_mutex.lock()!!;
   world.set(++id_counter, lever::new(&event_queue, {100, 100}, id_counter));
-  world.set(++id_counter, lever::new(&event_queue, {200, 100}, id_counter));
-
-  world.set(++id_counter, xorgate::new(&event_queue, {150, 150}, id_counter));
-
-  world.set(++id_counter, bulb::new(&event_queue, {150, 200}, id_counter));
   world_mutex.unlock()!!;
-
-  component::connect(&event_queue, world.get_ref(1)!!, 0, world.get_ref(3)!!, 0);
-  component::connect(&event_queue, world.get_ref(2)!!, 0, world.get_ref(3)!!, 1);
-
-  component::connect(&event_queue, world.get_ref(3)!!, 0, world.get_ref(4)!!, 0);
 
   Component new_component;
 
@@ -108,21 +99,43 @@ fn int main(String[] args)
         world_mutex.unlock()!!;
         new_component.type = NONE;
       }
-      else if (try Tuple(<Id, Point>) component = get_component_id_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
-      {
-        if (!removing)
-        {
-          event_queue.push(component::pressed_event(component.first,component.second));
-        }
-        else
-        {
-          event_queue.push(component::removed_event(component.first));
-          removing = false;
-        }
-      }
       else if (removing)
       {
+        new_connection_from = {};
+        if (try Tuple(<Id, Point>) component = get_component_id_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
+        {
+          event_queue.push(component::removed_event(component.first));
+        }
         removing = false;
+      }
+      else if (new_connection_from.first != 0)
+      {
+        if(try Tuple(<Id, usz>) component = get_component_input_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
+        {
+          world_mutex.lock()!!;
+          Output* from = &world.get_ref(new_connection_from.first)!!.get_outputs()[new_connection_from.second];
+          Input* to = &world.get_ref(component.first)!!.get_inputs()[component.second];
+
+          if (from.in != null)
+          {
+            from.disconnect_input();
+          }
+          if (to.out != null)
+          {
+            to.out.disconnect_input();
+          }
+          from.connect_input(to);
+          world_mutex.unlock()!!;
+        }
+        new_connection_from = {};
+      }
+      else if (try Tuple(<Id, usz>) component = get_component_output_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
+      {
+        new_connection_from = component;
+      }
+      else if (try Tuple(<Id, Point>) component = get_component_id_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
+      {
+        event_queue.push(component::pressed_event(component.first,component.second));
       }
     }
     /*
@@ -146,16 +159,31 @@ fn int main(String[] args)
       {
         if (output.in != null)
         {
-          draw_between_points(component.get_pos(), world.get(output.in.parent_id)!!.get_pos());
+          draw_between_points(component.get_pos() + output.position, world.get(output.in.parent_id)!!.get_pos() + output.in.position);
         }
       }
       component.draw();
+      foreach (input : component.get_inputs())
+      {
+        rl::drawRectangle(...(component.get_pos() + input.position - 1), ...component::INPUT_SIZE + 2, rl::BLACK);
+        rl::drawRectangle(...(component.get_pos() + input.position), ...component::INPUT_SIZE, rl::GREEN);
+      }
+      foreach (output : component.get_outputs())
+      {
+        rl::drawRectangle(...(component.get_pos() + output.position - 1), ...component::OUTPUT_SIZE + 2, rl::BLACK);
+        rl::drawRectangle(...(component.get_pos() + output.position), ...component::OUTPUT_SIZE, rl::YELLOW);
+      }
     }
     if (new_component.type != NONE)
     {
       Vector2 pos = rl::getMousePosition();
       new_component.set_pos({(int)pos.x, (int)pos.y});
       new_component.draw();
+    }
+    if (new_connection_from.first != 0)
+    {
+      Vector2 mouse_pos = rl::getMousePosition();
+      draw_between_points(world.get_ref(new_connection_from.first)!!.get_pos(), {(int)mouse_pos.x, (int)mouse_pos.y});
     }
 
     rl::endMode2D();
@@ -177,11 +205,15 @@ fn int main(String[] args)
       @new_button(5, "nor", show_full_ui, event_queue, new_component);
       @new_button(6, "xor", show_full_ui, event_queue, new_component);
       @new_button(7, "xnor", show_full_ui, event_queue, new_component);
+      @new_button(8, "splitter", show_full_ui, event_queue, new_component);
+      @new_button(9, "latch", show_full_ui, event_queue, new_component);
+      @new_button(10, "pulse", show_full_ui, event_queue, new_component);
       removing = false;
     }
     else
     {
       rg::guiToggle({110, 20, 50, 20}, "REMOVE", &removing);
+      // rg::guiToggle({170, 20, 50, 20}, "MOVE", &moving);
     }
 
     rg::guiCheckBox({20, 40, 20, 20}, "Stress Test", &do_spam);
@@ -216,18 +248,49 @@ fault ComponentFault
   NONE_NEARBY
 }
 
-fn Tuple(<Id, Point>)! get_component_id_near_point(Point point, WorldMap* world)
+fn Tuple(<Id, Point>)! get_component_id_near_point(Point point, WorldMap* world, uint tolerance = 0)
 {
   foreach (val : world.value_tlist())
   {
     Point key = val.get_pos();
-    Point dif = point - key;
-    if ((dif).comp_ge({0, 0}) == {true, true} && (dif).comp_le(val.get_size()) == {true, true})
+    Point diff = point - key;
+    if (diff.comp_ge({0, 0} - val.get_size() * tolerance) == {true, true} && diff.comp_le(val.get_size() + val.get_size() * tolerance) == {true, true})
     {
-      return {val.get_id(), dif};
+      return {val.get_id(), diff};
     }
   };
+  return ComponentFault.NONE_NEARBY?;
+}
 
+fn Tuple(<Id, usz>)! get_component_input_near_point(Point point, WorldMap* world)
+{
+  if (try Tuple(<Id, Point>) result = get_component_id_near_point(point, world, 2))
+  {
+    foreach (id, &input : world.get_ref(result.first)!!.get_inputs())
+    {
+      Point diff = result.second - input.position;
+      if (diff.comp_ge({0, 0}) == {true, true} && diff.comp_le(component::INPUT_SIZE) == {true, true})
+      {
+        return {result.first, id};
+      }
+    }
+  }
+  return ComponentFault.NONE_NEARBY?;
+}
+
+fn Tuple(<Id, usz>)! get_component_output_near_point(Point point, WorldMap* world)
+{
+  if (try Tuple(<Id, Point>) result = get_component_id_near_point(point, world, 2))
+  {
+    foreach (id, &output : world.get_ref(result.first)!!.get_outputs())
+    {
+      Point diff = result.second - output.position;
+      if (diff.comp_ge({0, 0}) == {true, true} && diff.comp_le(component::OUTPUT_SIZE) == {true, true})
+      {
+        return {result.first, id};
+      }
+    }
+  }
   return ComponentFault.NONE_NEARBY?;
 }
 

@@ -15,7 +15,7 @@ const Point ANDGATE_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
-  return {pos, ANDGATE_SIZE, event_queue, id, ANDGATE, {.andgate = {{{id, null}, {id, null}}, {{false, {0, 1}, null, id}}}}};
+  return {pos, ANDGATE_SIZE, event_queue, id, ANDGATE, {.andgate = {{component::new_input(id, {0, 0}), component::new_input(id, {ANDGATE_SIZE.x, 0})}, {component::new_output(id, {ANDGATE_SIZE.x / 2, ANDGATE_SIZE.y}, false)}}}};
 }
 
 struct Andgate
@@ -54,7 +54,7 @@ fn void Andgate.recalculate_state(&self, EventQueue* event_queue) @private
   {
     bool tmp = self.outputs[0].on;
     self.outputs[0].on = self.inputs[0].out.on && self.inputs[1].out.on;
-    if (tmp != self.outputs[0].on)
+    if (tmp != self.outputs[0].on && self.outputs[0].in != null)
     {
       event_queue.push(component::power_change_event(self.outputs[0].in.parent_id));
     }

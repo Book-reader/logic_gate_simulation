@@ -16,7 +16,7 @@ const Point LEVER_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
-  return {pos, LEVER_SIZE, event_queue, id, LEVER, {.lever = {{{false, {0, 1}, null, id}}}}};
+  return {pos, LEVER_SIZE, event_queue, id, LEVER, {.lever = {{component::new_output(id, {LEVER_SIZE.x / 2 - component::OUTPUT_SIZE.x / 2 , LEVER_SIZE.y}, false)}}}};
 }
 
 struct Lever

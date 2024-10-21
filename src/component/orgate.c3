@@ -15,7 +15,7 @@ const Point ORGATE_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
-  return {pos, ORGATE_SIZE, event_queue, id, ORGATE, {.orgate = {{{id, null}, {id, null}}, {{false, {0, 1}, null, id}}}}};
+  return {pos, ORGATE_SIZE, event_queue, id, ORGATE, {.orgate = {{component::new_input(id, {0, 0}), component::new_input(id, {ORGATE_SIZE.x, 0})}, {component::new_output(id, {ORGATE_SIZE.x / 2, ORGATE_SIZE.y}, false)}}}};
 }
 
 struct Orgate

@@ -15,7 +15,7 @@ const Point NORGATE_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
-  return {pos, NORGATE_SIZE, event_queue, id, NORGATE, {.norgate = {{{id, null}, {id, null}}, {{true, {0, 1}, null, id}}}}};
+  return {pos, NORGATE_SIZE, event_queue, id, NORGATE, {.norgate = {{component::new_input(id, {0, 0}), component::new_input(id, {NORGATE_SIZE.x, 0})}, {component::new_output(id, {NORGATE_SIZE.x / 2, NORGATE_SIZE.y}, true)}}}};
 }
 
 struct Norgate
@@ -55,6 +55,7 @@ fn void Norgate.recalculate_state(&self, EventQueue* event_queue) @private
   {
     self.outputs[0].on = !(state[0] || state[1]);
   };
+  // TODO: this only works for the first output
   if (old != self.outputs[0].on && self.outputs[0].in != null)
   {
     event_queue.push(component::power_change_event(self.outputs[0].in.parent_id));

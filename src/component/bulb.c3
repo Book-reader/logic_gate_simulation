@@ -16,7 +16,7 @@ const Point BULB_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
-  return {pos, BULB_SIZE, event_queue, id, BULB, {.bulb = {{{id, null}}, false}}};
+  return {pos, BULB_SIZE, event_queue, id, BULB, {.bulb = {{component::new_input(id, {BULB_SIZE.x / 2 - component::INPUT_SIZE.x / 2, (- BULB_SIZE.y / 4)})}, false}}};
 }
 
 struct Bulb
