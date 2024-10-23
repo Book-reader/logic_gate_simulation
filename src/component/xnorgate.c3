@@ -15,7 +15,7 @@ const PointSmall XNORGATE_SIZE = {20, 20};
 
 fn Component new(EventQueue* event_queue, Point pos, Id id)
 {
-  return {pos, XNORGATE_SIZE, event_queue, id, XNORGATE, {.xnorgate = {{component::new_input(id, {0, 0}), component::new_input(id, {XNORGATE_SIZE.x, 0})}, {component::new_output(id, {XNORGATE_SIZE.x / 2, XNORGATE_SIZE.y}, false)}}}};
+  return {pos, XNORGATE_SIZE, event_queue, id, XNORGATE, {.xnorgate = {{component::new_input(id, {0, 0}), component::new_input(id, {XNORGATE_SIZE.x, 0})}, {component::new_output(id, {XNORGATE_SIZE.x / 2, XNORGATE_SIZE.y}, true)}}}};
 }
 
 struct Xnorgate

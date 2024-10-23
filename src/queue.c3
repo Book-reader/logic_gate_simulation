@@ -10,11 +10,15 @@ struct Queue
 
 fn void Queue.push(&self, Type element)
 {
+  logic_gate_simulation::event_queue_mutex.lock()!!;
+  defer logic_gate_simulation::event_queue_mutex.unlock()!!;
   self.stuff.push(element);
 }
 
 fn Type! Queue.pop(&self)
 {
+  logic_gate_simulation::event_queue_mutex.lock()!!;
+  defer logic_gate_simulation::event_queue_mutex.unlock()!!;
   return self.stuff.pop_front();
 }
 

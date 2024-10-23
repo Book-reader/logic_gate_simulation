@@ -46,6 +46,10 @@ fn int main(String[] args)
   bool show_full_ui = false;
   bool removing = false;
   Tuple(<Id, usz>) new_connection_from = {};
+  Id moving_id = 0;
+  bool dragging = false;
+  Point old_pos;
+  Point moving_offset;
 
   /*
    *
@@ -63,15 +67,6 @@ fn int main(String[] args)
 
   event_queue.new_init();
   defer event_queue.free();
-
-  // io::printfn("%s: %s", Component.nameof, Component.sizeof);
-  // io::printfn("%s: %s", ComponentData.nameof, ComponentData.sizeof);
-  // $foreach ($member : ComponentData.membersof)
-  //   io::printfn("%s: %s", $member.nameof, $member.sizeof);
-  // $endforeach
-  // io::printfn("%s: %s", Input.nameof, Input.sizeof);
-  // io::printfn("%s: %s", Output.nameof, Output.sizeof);
-  // io::printfn("%s: %s", Point.nameof, Point.sizeof);
 
   world_mutex.init()!!;
   defer world_mutex.destroy()!!;
@@ -99,10 +94,49 @@ fn int main(String[] args)
   // TODO: fix strange issues when connecting components
   while (!rl::windowShouldClose())
   {
-    if (rl::isMouseButtonReleased(MouseButton.LEFT))
+    Vector2 mouse_pos = rl::getMousePosition();
+    defer old_pos = {(int)mouse_pos.x, (int)mouse_pos.y};
     {
-      Vector2 mouse_pos = rl::getMousePosition();
-      if (new_component.type != NONE)
+      Vector2 mouse_scroll = rl::getMouseWheelMoveV();
+      camera.zoom += mouse_scroll.y / 10;
+    }
+    if (rl::isMouseButtonReleased(MouseButton.MIDDLE))
+    {
+      camera.zoom = 1;
+    }
+    if (rl::isMouseButtonPressed(MouseButton.LEFT))
+    {
+      if (try Tuple(<Id, Point>) component = get_component_id_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world, &camera))
+      {
+        moving_id = component.first;
+        moving_offset = world.get(component.first)!!.get_pos() - (Point)(float[<2>]{(int)mouse_pos.x, (int)mouse_pos.y} / camera.zoom);
+        dragging = false;
+      }
+      else
+      {
+        dragging = true;
+      }
+    }
+    else if ((moving_id != 0 || dragging) && rl::isMouseButtonDown(MouseButton.LEFT) && ((int)mouse_pos.x != old_pos.x || (int)mouse_pos.y != old_pos.y))
+    {
+      if (!dragging)
+      {
+        world.get_ref(moving_id)!!.set_pos({(int)(mouse_pos.x / camera.zoom), (int)(mouse_pos.y / camera.zoom)} + moving_offset);
+      }
+      else
+      {
+        camera.offset = {camera.offset.x + mouse_pos.x - old_pos.x, camera.offset.y + mouse_pos.y - old_pos.y};
+      }
+    }
+    else if (rl::isMouseButtonReleased(MouseButton.LEFT))
+    {
+      if (moving_id != 0)
+      {
+        moving_id = 0;
+      }
+      if (((int)mouse_pos.x != old_pos.x || (int)mouse_pos.y != old_pos.y))
+      {}
+      else if (new_component.type != NONE)
       {
         world_mutex.lock()!!;
         world.set(id_counter, new_component);
@@ -112,11 +146,11 @@ fn int main(String[] args)
       else if (removing)
       {
         new_connection_from = {};
-        if (try Tuple(<Id, Point>) component = get_component_id_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
+        if (try Tuple(<Id, Point>) component = get_component_id_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world, &camera))
         {
           event_queue.push(component::removed_event(component.first));
         }
-        else if(try Tuple(<Id, usz>) component = get_component_input_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
+        else if(try Tuple(<Id, usz>) component = get_component_input_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world, &camera))
         {
           Input* in = &world.get_ref(component.first)!!.get_inputs()[component.second];
           if (in.out != null)
@@ -124,7 +158,7 @@ fn int main(String[] args)
             in.out.disconnect_input();
           }
         }
-        else if(try Tuple(<Id, usz>) component = get_component_output_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
+        else if(try Tuple(<Id, usz>) component = get_component_output_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world, &camera))
         {
           Output* out = &world.get_ref(component.first)!!.get_outputs()[component.second];
           if (out.in != null)
@@ -136,7 +170,7 @@ fn int main(String[] args)
       }
       else if (new_connection_from.first != 0)
       {
-        if(try Tuple(<Id, usz>) component = get_component_input_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
+        if(try Tuple(<Id, usz>) component = get_component_input_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world, &camera))
         {
           world_mutex.lock()!!;
           Output* from = &world.get_ref(new_connection_from.first)!!.get_outputs()[new_connection_from.second];
@@ -151,17 +185,18 @@ fn int main(String[] args)
             to.out.disconnect_input();
           }
           from.connect_input(to);
+          event_queue.push(component::power_change_event(to.parent_id));
           world_mutex.unlock()!!;
         }
         new_connection_from = {};
       }
-      else if (try Tuple(<Id, usz>) component = get_component_output_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
+      else if (try Tuple(<Id, usz>) component = get_component_output_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world, &camera))
       {
         new_connection_from = component;
       }
-      else if (try Tuple(<Id, Point>) component = get_component_id_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world))
+      else if (try Tuple(<Id, Point>) component = get_component_id_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world, &camera))
       {
-        event_queue.push(component::pressed_event(component.first,component.second));
+        event_queue.push(component::pressed_event(component.first, component.second));
       }
     }
     /*
@@ -202,14 +237,12 @@ fn int main(String[] args)
     }
     if (new_component.type != NONE)
     {
-      Vector2 pos = rl::getMousePosition();
-      new_component.set_pos({(int)pos.x, (int)pos.y});
+      new_component.set_pos({(int)((mouse_pos.x - camera.offset.x) / camera.zoom), (int)((mouse_pos.y - camera.offset.y) / camera.zoom)});
       new_component.draw();
     }
     if (new_connection_from.first != 0)
     {
-      Vector2 mouse_pos = rl::getMousePosition();
-      draw_between_points(world.get_ref(new_connection_from.first)!!.get_pos() + (Point)world.get_ref(new_connection_from.first)!!.get_outputs()[new_connection_from.second].position, {(int)mouse_pos.x, (int)mouse_pos.y});
+      draw_between_points(world.get_ref(new_connection_from.first)!!.get_pos() + (Point)world.get_ref(new_connection_from.first)!!.get_outputs()[new_connection_from.second].position, {(int)((mouse_pos.x - camera.offset.x) / camera.zoom), (int)((mouse_pos.y - camera.offset.y) / camera.zoom)});
     }
 
     rl::endMode2D();
@@ -274,13 +307,14 @@ fault ComponentFault
   NONE_NEARBY
 }
 
-fn Tuple(<Id, Point>)! get_component_id_near_point(Point point, WorldMap* world, uint tolerance = 0)
+fn Tuple(<Id, Point>)! get_component_id_near_point(Point point, WorldMap* world, Camera2D* camera, uint tolerance = 0)
 {
   foreach (val : world.value_tlist())
   {
-    Point key = val.get_pos();
+    Point key = (Point)((float[<2>])val.get_pos() * camera.zoom) + {(int)camera.offset.x, (int)camera.offset.y};
     Point diff = point - key;
-    if (diff.comp_ge({0, 0} - (val.get_size() * tolerance)) == {true, true} && diff.comp_le(val.get_size() + (val.get_size() * tolerance)) == {true, true})
+    Point size = (Point)((float[<2>])val.get_size() * camera.zoom);
+    if (diff.comp_ge({0, 0} - (size * tolerance)) == {true, true} && diff.comp_le((Point)((float[<2>])val.get_size() * camera.zoom) + size * tolerance) == {true, true})
     {
       return {val.get_id(), diff};
     }
@@ -288,14 +322,15 @@ fn Tuple(<Id, Point>)! get_component_id_near_point(Point point, WorldMap* world,
   return ComponentFault.NONE_NEARBY?;
 }
 
-fn Tuple(<Id, usz>)! get_component_input_near_point(Point point, WorldMap* world)
+// TODO: scale input position & size using camera
+fn Tuple(<Id, usz>)! get_component_input_near_point(Point point, WorldMap* world, Camera2D* camera)
 {
-  if (try Tuple(<Id, Point>) result = get_component_id_near_point(point, world, 1))
+  if (try Tuple(<Id, Point>) result = get_component_id_near_point(point, world, camera, 1))
   {
     foreach (id, &input : world.get_ref(result.first)!!.get_inputs())
     {
-      Point diff = result.second - (Point)input.position;
-      if (diff.comp_ge({0, 0}) == {true, true} && diff.comp_le(component::INPUT_SIZE) == {true, true})
+      Point diff = result.second - (Point)((float[<2>])input.position * camera.zoom);
+      if (diff.comp_ge({0, 0}) == {true, true} && diff.comp_le((Point)((float[<2>])component::INPUT_SIZE * camera.zoom)) == {true, true})
       {
         return {result.first, id};
       }
@@ -304,14 +339,15 @@ fn Tuple(<Id, usz>)! get_component_input_near_point(Point point, WorldMap* world
   return ComponentFault.NONE_NEARBY?;
 }
 
-fn Tuple(<Id, usz>)! get_component_output_near_point(Point point, WorldMap* world)
+// TODO: scale output position & size using camera
+fn Tuple(<Id, usz>)! get_component_output_near_point(Point point, WorldMap* world, Camera2D* camera)
 {
-  if (try Tuple(<Id, Point>) result = get_component_id_near_point(point, world, 1))
+  if (try Tuple(<Id, Point>) result = get_component_id_near_point(point, world, camera, 1))
   {
     foreach (id, &output : world.get_ref(result.first)!!.get_outputs())
     {
-      Point diff = result.second - (Point)output.position;
-      if (diff.comp_ge({0, 0}) == {true, true} && diff.comp_le(component::OUTPUT_SIZE) == {true, true})
+      Point diff = result.second - (Point)((float[<2>])output.position * camera.zoom);
+      if (diff.comp_ge({0, 0}) == {true, true} && diff.comp_le((Point)((float[<2>])component::OUTPUT_SIZE * camera.zoom)) == {true, true})
       {
         return {result.first, id};
       }
@@ -335,6 +371,20 @@ macro void @new_button(int $idx, String $type, bool* &show_full_ui, EventQueue* 
 
 usz spam;
 
+// I have a feeling that no more than 24 components will be removed in a single tick.
+Id[24] recently_removed;
+fn bool Id[24].contains(&self, Id id)
+{
+  foreach (i : self)
+  {
+    if (i == id) return true;
+  }
+  return false;
+}
+usz recently_removed_idx;
+
+import electronics_game::range;
+
 fn int component_thread(void* arg)
 {
   while (*(bool*)arg)
@@ -346,13 +396,20 @@ fn int component_thread(void* arg)
      *
     */
 
-    event_queue_mutex.lock()!!;
     // Stress test
     if (do_spam)
     {
       for (int i = 0; i < spam; i++)
       {
-        event_queue.push(component::pressed_event(1, {0, 0}));
+        if (try world.get(1))
+        {
+          event_queue.push(component::pressed_event(1, {0, 0}));
+        }
+        else
+        {
+          io::printn("Cannot stress test when component id 1 does not exist, you may have removed the initial lever");
+          do_spam = false;
+        }
       }
       spam += 1;
     }
@@ -367,6 +424,7 @@ fn int component_thread(void* arg)
     for (int i = 0; i < event_num; i++)
     {
       GameEvent! event = event_queue.pop();
+
       if (catch error = event)
       {
         io::printfn("ERROR: unable to handle event with message: %s", error);
@@ -375,12 +433,20 @@ fn int component_thread(void* arg)
       {
         if (event.target_id != 0)
         {
-          world_mutex.lock()!!;
-          world.get_ref(event.target_id)!!.handle_event(&event);
-          world_mutex.unlock()!!;
+          if (!recently_removed.contains(event.target_id))
+          {
+            world_mutex.lock()!!;
+            world.get_ref(event.target_id)!!.handle_event(&event);
+            world_mutex.unlock()!!;
+          }
+          else
+          {
+            io::printfn("got event for removed id %s", event.target_id);
+          }
         }
         else
         {
+          // TODO: this causes everything to freese for some reason
           world_mutex.lock()!!;
           foreach (id : world.tcopy_keys())
           {
@@ -388,13 +454,15 @@ fn int component_thread(void* arg)
           }
           if (event.type == COMPONENT_REMOVED)
           {
+            recently_removed[recently_removed_idx] = event.data.id;
+            recently_removed_idx = (recently_removed_idx + 1) % recently_removed.len;
             world.remove(event.data.id);
           }
+          io::printfn("%s, %s", recently_removed, recently_removed_idx);
           world_mutex.unlock()!!;
         }
       }
     }
-    event_queue_mutex.unlock()!!;
 
     Time end_time = time::now();
     Duration delta_time = end_time.diff_us(start_time);
@@ -418,4 +486,15 @@ fn int component_thread(void* arg)
     }
   }
   return 0;
+}
+
+
+module electronics_game::range(<Type>);
+
+macro @range(Type start, Type end; @body(Type i))
+{
+  for (Type i = start; i < end; i++)
+  {
+    @body(i);
+  }
 }
