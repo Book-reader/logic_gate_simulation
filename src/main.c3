@@ -383,8 +383,6 @@ fn bool Id[24].contains(&self, Id id)
 }
 usz recently_removed_idx;
 
-import electronics_game::range;
-
 fn int component_thread(void* arg)
 {
   while (*(bool*)arg)
@@ -439,10 +437,6 @@ fn int component_thread(void* arg)
             world.get_ref(event.target_id)!!.handle_event(&event);
             world_mutex.unlock()!!;
           }
-          else
-          {
-            io::printfn("got event for removed id %s", event.target_id);
-          }
         }
         else
         {
@@ -458,7 +452,6 @@ fn int component_thread(void* arg)
             recently_removed_idx = (recently_removed_idx + 1) % recently_removed.len;
             world.remove(event.data.id);
           }
-          io::printfn("%s, %s", recently_removed, recently_removed_idx);
           world_mutex.unlock()!!;
         }
       }
@@ -486,15 +479,4 @@ fn int component_thread(void* arg)
     }
   }
   return 0;
-}
-
-
-module electronics_game::range(<Type>);
-
-macro @range(Type start, Type end; @body(Type i))
-{
-  for (Type i = start; i < end; i++)
-  {
-    @body(i);
-  }
 }
