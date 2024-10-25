@@ -4,6 +4,8 @@ import raylib5;
 import raygui;
 
 import logic_gate_simulation::component;
+import logic_gate_simulation::generic_component;
+import logic_gate_simulation::event_manager;
 
 import std::io;
 import std::math;
@@ -26,12 +28,14 @@ const Duration MIN_DELAY_US = (usz)1e6 / MAX_TPS;
 usz tps_avg @private;
 const TPS_SAMPLES @private = 10;
 
-WorldMap world @private;
-EventQueue event_queue @private;
+WorldMap world;
+EventQueue event_queue;
 usz event_num @private;
+EventManager event_manager;
 
 Mutex world_mutex;
 Mutex event_queue_mutex;
+Mutex event_manager_mutex;
 
 bool do_spam;
 bool show_uncapped_tps;
@@ -43,9 +47,17 @@ fn int main(String[] args)
   defer rl::closeWindow();
   rl::setTargetFPS(60);
 
+  List(<Bulb>) bulbs;
+  bulbs.new_init();
+  defer bulbs.free();
+  List(<Lever>) levers;
+  levers.new_init();
+  defer levers.free();
+
+
   bool show_full_ui = false;
   bool removing = false;
-  Tuple(<Id, usz>) new_connection_from = {};
+  Tuple(<Id, OpId>) new_connection_from = {};
   Id moving_id = 0;
   bool dragging = false;
   Point old_pos;
@@ -60,7 +72,7 @@ fn int main(String[] args)
   camera.target = {0, 0};
   camera.offset = {0, 0};
   camera.rotation = 0;
-  camera.zoom = 1;
+  camera.zoom = 2;
 
   world.new_init();
   defer world.free();
@@ -68,10 +80,15 @@ fn int main(String[] args)
   event_queue.new_init();
   defer event_queue.free();
 
+  event_manager.new_init();
+  defer event_manager.free();
+
   world_mutex.init()!!;
   defer world_mutex.destroy()!!;
   event_queue_mutex.init()!!;
   defer event_queue_mutex.destroy()!!;
+  event_manager_mutex.init()!!;
+  defer event_manager_mutex.destroy()!!;
 
   bool running = true;
   Thread tick_thread;
@@ -86,10 +103,18 @@ fn int main(String[] args)
   }
 
   world_mutex.lock()!!;
-  world.set(++id_counter, lever::new(&event_queue, {100, 100}, id_counter));
+  // world.set(++id_counter, lever::new(&event_queue, {100, 100}, id_counter));
+  world.set(++id_counter, &&Lever.new({}, {200, 200}, id_counter));
+  world.set(++id_counter, &&Bulb.new({}, {300, 300}, id_counter));
+  component::connect(world.get_ref(1)!!, 0, world.get_ref(2)!!, 0);
   world_mutex.unlock()!!;
+  io::printfn("%s: %s", "Lever", Lever.sizeof);
+  io::printfn("%s: %s", "Bulb", Bulb.sizeof);
+  io::printfn("%s: %s", Input.nameof, Input.sizeof);
+  io::printfn("%s: %s", Output.nameof, Output.sizeof);
 
   Component new_component;
+  // Tuple(<usz, typeid>) new_component;
 
   // TODO: fix strange issues when connecting components
   while (!rl::windowShouldClose())
@@ -134,14 +159,15 @@ fn int main(String[] args)
       {
         moving_id = 0;
       }
+      // FIXME: this does not work when the mouse has not moved before placing back the moving component
       if (((int)mouse_pos.x != old_pos.x || (int)mouse_pos.y != old_pos.y))
       {}
-      else if (new_component.type != NONE)
+      else if (new_component != null)
       {
         world_mutex.lock()!!;
         world.set(id_counter, new_component);
         world_mutex.unlock()!!;
-        new_component.type = NONE;
+        new_component = null;
       }
       else if (removing)
       {
@@ -150,47 +176,49 @@ fn int main(String[] args)
         {
           event_queue.push(component::removed_event(component.first));
         }
-        else if(try Tuple(<Id, usz>) component = get_component_input_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world, &camera))
+        else if(try Tuple(<Id, OpId>) component = get_component_input_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world, &camera))
         {
-          Input* in = &world.get_ref(component.first)!!.get_inputs()[component.second];
-          if (in.out != null)
-          {
-            in.out.disconnect_input();
-          }
+          // Input* in = &world.get_ref(component.first)!!.get_inputs()[component.second];
+          // component::disconnect(world.get_ref(component.first)!!, component.second, world.get_ref(2)!!);
+          // if (in.out != null)
+          // {
+          //   in.out.disconnect_input();
+          // }
         }
-        else if(try Tuple(<Id, usz>) component = get_component_output_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world, &camera))
+        else if(try Tuple(<Id, OpId>) component = get_component_output_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world, &camera))
         {
           Output* out = &world.get_ref(component.first)!!.get_outputs()[component.second];
-          if (out.in != null)
-          {
-            out.disconnect_input();
-          }
+          // if (out.in != null)
+          // {
+          //   out.disconnect_input();
+          // }
         }
         removing = false;
       }
       else if (new_connection_from.first != 0)
       {
-        if(try Tuple(<Id, usz>) component = get_component_input_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world, &camera))
+        if(try Tuple(<Id, OpId>) component = get_component_input_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world, &camera))
         {
           world_mutex.lock()!!;
-          Output* from = &world.get_ref(new_connection_from.first)!!.get_outputs()[new_connection_from.second];
-          Input* to = &world.get_ref(component.first)!!.get_inputs()[component.second];
+          // Output* from = &world.get_ref(new_connection_from.first)!!.get_outputs()[new_connection_from.second];
+          // Input* to = &world.get_ref(component.first)!!.get_inputs()[component.second];
 
-          if (from.in != null)
-          {
-            from.disconnect_input();
-          }
-          if (to.out != null)
-          {
-            to.out.disconnect_input();
-          }
-          from.connect_input(to);
-          event_queue.push(component::power_change_event(to.parent_id));
+          component::connect(world.get_ref(new_connection_from.first)!!, new_connection_from.second, world.get_ref(component.first)!!, component.second);
+          // if (from.in != null)
+          // {
+          //   from.disconnect_input();
+          // }
+          // if (to.out != null)
+          // {
+          //   to.out.disconnect_input();
+          // }
+          // from.connect_input(to);
+          // event_queue.push(component::power_change_event(to.parent_id));
           world_mutex.unlock()!!;
         }
         new_connection_from = {};
       }
-      else if (try Tuple(<Id, usz>) component = get_component_output_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world, &camera))
+      else if (try Tuple(<Id, OpId>) component = get_component_output_near_point({(int)mouse_pos.x, (int)mouse_pos.y}, &world, &camera))
       {
         new_connection_from = component;
       }
@@ -216,11 +244,12 @@ fn int main(String[] args)
     rl::beginMode2D(camera);
     foreach (component : world.value_tlist())
     {
-      foreach (output : component.get_outputs())
+      // FIXME: this will not work until there is a way to get the parent id from an output or if an input holds a pointer to the parent component instead of its output bool
+      foreach (input : component.get_inputs())
       {
-        if (output.in != null)
+        if (input.connected_id != 0)
         {
-          draw_between_points(component.get_pos() + (Point)output.position, world.get(output.in.parent_id)!!.get_pos() + (Point)output.in.position);
+          draw_between_points(component.get_pos() + (Point)input.position, world.get(input.connected_id)!!.get_pos() + (Point)world.get(input.connected_id)!!.get_outputs()[input.output_idx].position);
         }
       }
       component.draw();
@@ -235,7 +264,7 @@ fn int main(String[] args)
         rl::drawRectangle(...(component.get_pos() + (Point)output.position), ...component::OUTPUT_SIZE, rl::YELLOW);
       }
     }
-    if (new_component.type != NONE)
+    if (new_component != null)
     {
       new_component.set_pos({(int)((mouse_pos.x - camera.offset.x) / camera.zoom), (int)((mouse_pos.y - camera.offset.y) / camera.zoom)});
       new_component.draw();
@@ -256,23 +285,22 @@ fn int main(String[] args)
 
     if (show_full_ui)
     {
-      @new_button(0, "lever", show_full_ui, event_queue, new_component);
-      @new_button(1, "bulb", show_full_ui, event_queue, new_component);
-      @new_button(2, "and", show_full_ui, event_queue, new_component);
-      @new_button(3, "or", show_full_ui, event_queue, new_component);
-      @new_button(4, "not", show_full_ui, event_queue, new_component);
-      @new_button(5, "nor", show_full_ui, event_queue, new_component);
-      @new_button(6, "xor", show_full_ui, event_queue, new_component);
-      @new_button(7, "xnor", show_full_ui, event_queue, new_component);
-      @new_button(8, "splitter", show_full_ui, event_queue, new_component);
-      @new_button(9, "latch", show_full_ui, event_queue, new_component);
-      @new_button(10, "pulse", show_full_ui, event_queue, new_component);
+      @new_button(0, "Lever", show_full_ui, event_queue, new_component, levers);
+      @new_button(1, "Bulb", show_full_ui, event_queue, new_component, bulbs);
+      // @new_button(2, "And", show_full_ui, event_queue, new_component);
+      // @new_button(3, "Or", show_full_ui, event_queue, new_component);
+      // @new_button(4, "Not", show_full_ui, event_queue, new_component);
+      // @new_button(5, "Nor", show_full_ui, event_queue, new_component);
+      // @new_button(6, "Xor", show_full_ui, event_queue, new_component);
+      // @new_button(7, "Xnor", show_full_ui, event_queue, new_component);
+      // @new_button(8, "Splitter", show_full_ui, event_queue, new_component);
+      // @new_button(9, "Latch", show_full_ui, event_queue, new_component);
+      // @new_button(10, "Pulse", show_full_ui, event_queue, new_component);
       removing = false;
     }
     else
     {
       rg::guiToggle({110, 20, 50, 20}, "REMOVE", &removing);
-      // rg::guiToggle({170, 20, 50, 20}, "MOVE", &moving);
     }
 
     rg::guiCheckBox({20, 40, 20, 20}, "Stress Test", &do_spam);
@@ -323,11 +351,11 @@ fn Tuple(<Id, Point>)! get_component_id_near_point(Point point, WorldMap* world,
 }
 
 // TODO: scale input position & size using camera
-fn Tuple(<Id, usz>)! get_component_input_near_point(Point point, WorldMap* world, Camera2D* camera)
+fn Tuple(<Id, OpId>)! get_component_input_near_point(Point point, WorldMap* world, Camera2D* camera)
 {
   if (try Tuple(<Id, Point>) result = get_component_id_near_point(point, world, camera, 1))
   {
-    foreach (id, &input : world.get_ref(result.first)!!.get_inputs())
+    foreach (OpId id, &input : world.get_ref(result.first)!!.get_inputs())
     {
       Point diff = result.second - (Point)((float[<2>])input.position * camera.zoom);
       if (diff.comp_ge({0, 0}) == {true, true} && diff.comp_le((Point)((float[<2>])component::INPUT_SIZE * camera.zoom)) == {true, true})
@@ -340,11 +368,11 @@ fn Tuple(<Id, usz>)! get_component_input_near_point(Point point, WorldMap* world
 }
 
 // TODO: scale output position & size using camera
-fn Tuple(<Id, usz>)! get_component_output_near_point(Point point, WorldMap* world, Camera2D* camera)
+fn Tuple(<Id, OpId>)! get_component_output_near_point(Point point, WorldMap* world, Camera2D* camera)
 {
   if (try Tuple(<Id, Point>) result = get_component_id_near_point(point, world, camera, 1))
   {
-    foreach (id, &output : world.get_ref(result.first)!!.get_outputs())
+    foreach (OpId id, &output : world.get_ref(result.first)!!.get_outputs())
     {
       Point diff = result.second - (Point)((float[<2>])output.position * camera.zoom);
       if (diff.comp_ge({0, 0}) == {true, true} && diff.comp_le((Point)((float[<2>])component::OUTPUT_SIZE * camera.zoom)) == {true, true})
@@ -356,16 +384,19 @@ fn Tuple(<Id, usz>)! get_component_output_near_point(Point point, WorldMap* worl
   return ComponentFault.NONE_NEARBY?;
 }
 
-macro void @new_button(int $idx, String $type, bool* &show_full_ui, EventQueue* &event_queue, Component* &new_component)
+macro void @new_button(int $idx, String $type, bool* &show_full_ui, EventQueue* &event_queue, Component* &new_component, list)
 {
   if (rg::guiButton({(float)(110 + 60 * $idx), 20, 50, 20}, $type.temp_ascii_to_upper()))
   {
     *show_full_ui = false;
-    $if (!$defined($eval($type +++ "gate"))):
-      *new_component = $eval($type +++ "::new")(event_queue, {0, 0}, ++id_counter);
+    $if (!$defined($evaltype($type +++ "Gate"))):
+      $evaltype($type) temp;
     $else
-      *new_component = $eval($type +++ "gate::new")(event_queue, {0, 0}, ++id_counter);
+      $evaltype($type +++ "Gate") temp;
     $endif
+    temp.new({0, 0}, ++id_counter);
+    list.push(temp);
+    *new_component = (Component)list.get_ref(list.len() - 1);
   }
 }
 
@@ -429,12 +460,19 @@ fn int component_thread(void* arg)
       }
       else
       {
-        if (event.target_id != 0)
+        if (event.source_id != 0)
         {
-          if (!recently_removed.contains(event.target_id))
+          if (!recently_removed.contains(event.source_id))
           {
             world_mutex.lock()!!;
-            world.get_ref(event.target_id)!!.handle_event(&event);
+            if (try Id[] listeners = event_manager.listeners_of(event.source_id))
+            {
+              foreach (listener : listeners)
+              {
+                world.get_ref(listener)!!.handle_event(&event);
+              }
+            }
+            // world.get_ref(event.target_id)!!.handle_event(&event);
             world_mutex.unlock()!!;
           }
         }
@@ -442,15 +480,20 @@ fn int component_thread(void* arg)
         {
           // TODO: this causes everything to freese for some reason
           world_mutex.lock()!!;
-          foreach (id : world.tcopy_keys())
+          switch (event.type)
           {
-            world.get_ref(id)!!.handle_event(&event);
-          }
-          if (event.type == COMPONENT_REMOVED)
-          {
-            recently_removed[recently_removed_idx] = event.data.id;
-            recently_removed_idx = (recently_removed_idx + 1) % recently_removed.len;
-            world.remove(event.data.id);
+            case PRESSED:
+              world.get_ref(event.data.id)!!.handle_event(&event);
+            case COMPONENT_REMOVED:
+              recently_removed[recently_removed_idx] = event.data.id;
+              recently_removed_idx = (recently_removed_idx + 1) % recently_removed.len;
+              world.remove(event.data.id);
+              nextcase;
+            default:
+              foreach (id : world.tcopy_keys())
+              {
+                world.get_ref(id)!!.handle_event(&event);
+              }
           }
           world_mutex.unlock()!!;
         }

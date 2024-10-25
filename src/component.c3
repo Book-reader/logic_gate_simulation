@@ -8,8 +8,14 @@ const PointSmall OUTPUT_SIZE = {5, 5};
 def Point = int[<2>];
 def PointSmall = short[<2>];
 def EventQueue = Queue(<GameEvent>);
+def OpId = char;
 def Id = uint;
-def Splitter = splitter::Splitter;
+// def Splitter = splitter::Splitter;
+
+macro unimplemented() @builtin
+{
+  unreachable("Not implemented yet: %s", $$FUNC);
+}
 
 fn uint int[<2>].hash(&self)
 {
@@ -19,23 +25,23 @@ fn uint int[<2>].hash(&self)
 struct GameEvent
 {
   EventType type;
-  Id target_id;
+  Id source_id;
   EventData data;
 }
 
-fn GameEvent power_change_event(Id target_id)
+fn GameEvent power_change_event(Id source_id)
 {
-  return {POWER_STATE_CHANGE, target_id, {}};
+  return {POWER_STATE_CHANGE, source_id, {}};
 }
 
-fn GameEvent removed_event(Id removed_id)
+fn GameEvent removed_event(Id source_id)
 {
-  return {COMPONENT_REMOVED, 0, {.id = removed_id}};
+  return {COMPONENT_REMOVED, source_id, {}};
 }
 
 fn GameEvent pressed_event(Id target_id, Point relative_coords)
 {
-  return {PRESSED, target_id, {.pos = relative_coords}};
+  return {PRESSED, 0, {.id = target_id, .pos = relative_coords}};
 }
 
 enum EventType : char
@@ -47,7 +53,7 @@ enum EventType : char
   PRESSED
 }
 
-union EventData
+struct EventData
 {
   Id id;
   // uptr ptr;
@@ -56,8 +62,8 @@ union EventData
 
 struct Input
 {
-  Id parent_id;
-  Output* out;
+  Id connected_id;
+  OpId output_idx;
   PointSmall position;
 }
 
@@ -65,212 +71,144 @@ struct Output
 {
   bool on;
   PointSmall position;
-  Input* in;
-  Id parent_id;
 }
 
 fn void Output.connect_input(&self, Input* input)
 {
-  self.in = input;
-  input.out = self;
+  unimplemented();
+  // self.in = input;
+  // input.out = self;
 }
 
 fn void Output.disconnect_input(&self)
 {
-  self.in.out = null;
-  self.in = null;
+  unimplemented();
+  // self.in.out = null;
+  // self.in = null;
 }
 
-fn Input new_input(Id id, PointSmall pos = {0, 0})
+fn Input new_input(PointSmall pos)
 {
-  return {id, null, pos};
+  return {0, 0, pos};
 }
 
-fn Output new_output(Id id, PointSmall pos, bool on)
+fn Output new_output(PointSmall pos, bool on)
 {
-  return {on, pos, null, id};
+  return {on, pos};
 }
 
-// TODO have some sort of relative coordinate system for the outputs and inputs
-// eg:
-/*
- *       0,-1
- *  -1,1 comp,1,1
- *       0, 1
+/* TODO: have some sort of modular component system with generics & interfaces.
+ * I would likely need to use macros to automatically generate lists that store every created component then automatically add a reference to them to the world map
  *
-            */
-// Store the coordinates in the inputs and outputs,
-// return an array slice of them with get_inputs/outputs
-// then loop through them and read the coordinates to draw them
-struct Component
+ * def AndGate = Component(<NUM_INPUTS, NUM_OUTPUTS, &and_gate_state_calculate_fn>);
+*/
+interface Component
 {
-  // The things all components will have
-  Point pos;
-  PointSmall size;
-  EventQueue* event_queue;
-  Id id;
-  // Functions unique to each component type (draw, handle_events, etc)
-  ComponentType type;
-  ComponentData data;
+  fn Point get_pos();
+  fn PointSmall get_size();
+  fn Input[] get_inputs();
+  fn Output[] get_outputs();
+  fn Id get_id();
+
+  fn void set_pos(Point pos);
+  fn void recalculate_state();
+  fn void handle_event(GameEvent* event);
+  fn void draw();
 }
 
-fn Point Component.get_pos(&self)
+fn void connect(Component* from, OpId output_idx, Component* to, OpId input_idx)
+{
+  logic_gate_simulation::event_manager_mutex.lock()!!;
+  logic_gate_simulation::event_manager.register(to.get_id(), from.get_id());
+  logic_gate_simulation::event_manager_mutex.unlock()!!;
+  to.get_inputs()[input_idx].connected_id = from.get_id();
+  to.get_inputs()[input_idx].output_idx = output_idx;
+}
+
+fn void disconnect(Component* from, Component* to, OpId input_idx)
+{
+  logic_gate_simulation::event_manager_mutex.lock()!!;
+  logic_gate_simulation::event_manager.deregister(to.get_id(), from.get_id());
+  logic_gate_simulation::event_manager_mutex.unlock()!!;
+  to.get_inputs()[input_idx].connected_id = 0;
+  to.get_inputs()[input_idx].output_idx = 0;
+}
+
+fn bool output_state(Id component_id, OpId output_idx)
+{
+  return logic_gate_simulation::world.get_ref(component_id)!!.get_outputs()[output_idx].on;
+}
+
+module logic_gate_simulation::generic_component(<INPUT_COUNT, OUTPUT_COUNT, WIDTH, HEIGHT>);
+
+import logic_gate_simulation::component;
+
+// Implement recalculate_state, draw, and handle_event manually
+
+struct GenericComponent (Component)
+{
+  Input[INPUT_COUNT] inputs @if(INPUT_COUNT > 0);
+  Output[OUTPUT_COUNT] outputs @if(OUTPUT_COUNT > 0);
+  Point pos;
+  Id id;
+  // Only really used for BULB
+  bool on @if(OUTPUT_COUNT == 0);
+}
+
+fn Point GenericComponent.get_pos(&self) @dynamic
 {
   return self.pos;
 }
 
-fn void Component.set_pos(&self, Point pos)
+fn PointSmall GenericComponent.get_size(&self) @dynamic
 {
-  self.pos = pos;
+  return {WIDTH, HEIGHT};
 }
 
-fn Point Component.get_size(&self)
+fn Input[] GenericComponent.get_inputs(&self) @dynamic
 {
-  return self.size;
+  $if ($defined (self.inputs)):
+    return &self.inputs;
+  $else
+    return {};
+  $endif
 }
 
-fn Id Component.get_id(&self)
+fn Output[] GenericComponent.get_outputs(&self) @dynamic
+{
+  $if ($defined (self.outputs)):
+    return &self.outputs;
+  $else
+    return {};
+  $endif
+}
+
+fn Id GenericComponent.get_id(&self) @dynamic
 {
   return self.id;
 }
 
-fn void Component.draw(&self)
+fn void GenericComponent.set_pos(&self, Point pos) @dynamic
 {
-  @execute(self, "draw", self.pos, self.size);
+  self.pos = pos;
 }
 
-fn void Component.handle_event(&self, GameEvent* event)
+fn GenericComponent GenericComponent.new(self, Point pos, Id id)
 {
-  @execute(self, "handle_event", event, self.event_queue);
-}
-
-fn Output[] Component.get_outputs(&self)
-{
-  return @get(self, "outputs", Output[]{});
-}
-
-fn Input[] Component.get_inputs(&self)
-{
-  return @get(self, "inputs", Input[]{});
-}
-
-enum ComponentType : (String name)
-{
-  NONE = "none",
-  BULB = "bulb",
-  LEVER = "lever",
-  ANDGATE = "andgate",
-  ORGATE = "orgate",
-  NORGATE = "norgate",
-  NOTGATE = "notgate",
-  XNORGATE = "xnorgate",
-  XORGATE = "xorgate",
-  SPLITTER = "splitter",
-  LATCH = "latch",
-  PULSE = "pulse"
-}
-
-union ComponentData
-{
-  Bulb bulb;
-  Lever lever;
-  Andgate andgate;
-  Orgate orgate;
-  Norgate norgate;
-  Notgate notgate;
-  Xnorgate xnorgate;
-  Xorgate xorgate;
-  Splitter splitter;
-  Latch latch;
-  Pulse pulse;
-}
-
-macro @execute(Component* component, #function_name, ...) @private
-{
-  $foreach ($member : ComponentType.values)
-    $if ($member != NONE):
-      if (component.type == $member)
-      {
-        return component.data.$eval($member.name).$eval(#function_name)($vasplat);
-      }
-    $endif
-  $endforeach
-}
-
-macro @get(Component* component, #value, #if_none) @private
-{
-  $foreach ($member : ComponentType.values)
-    $if ($member != NONE):
-      if (component.type == $member)
-      {
-        $if ($defined(component.data.$eval($member.name).$eval(#value))):
-          return &component.data.$eval($member.name).$eval(#value);
-        $else
-          return #if_none;
-        $endif
-      }
-    $endif
-  $endforeach
-  unreachable("@get: component type not in ComponentType (impossible)");
-}
-
-macro @input_state(component_data; @body(bool[] outputs))
-{
-  var $Type = $typeof(component_data);
-  var $type_name = "";
-  // Remove the * from the type name and bring to lower to match enum value
-  $if ($defined($Type.inner)):
-    $type_name = $Type.inner.nameof.temp_ascii_to_lower();
-  $else
-    $type_name = $Type.nameof.temp_ascii_to_lower();
-  $endif
-  $foreach ($member : ComponentType.values)
-    $if ($member != NONE):
-      if ($type_name == $member.name)
-      {
-        $if ($defined(component_data.inputs)):
-          bool[component_data.inputs.len] input_bools;
-          foreach (i, op : component_data.inputs)
-          {
-            if (op.out != null)
-            {
-              input_bools[i] = op.out.on;
-            }
-          }
-          @body(&input_bools);
-        $else
-          unreachable("%s has not inputs", $typeof(component_data));
-        $endif
-      }
-    $endif
-  $endforeach
-}
-
-// TODO: error detection
-fn void connect(EventQueue* event_queue, Component* out, Id out_id, Component* in, Id in_id)
-{
-  out.get_outputs()[out_id].connect_input(&in.get_inputs()[in_id]);
-  event_queue.push(power_change_event(in.get_id()));
-}
-
-macro void connected_removed(self, GameEvent* event)
-{
-  $if($defined(self.inputs)):
+  GenericComponent new;
+  $if ($defined (self.inputs)):
     foreach (&input : self.inputs)
     {
-      if (input.out != null && input.out.parent_id == event.data.id)
-      {
-        input.out.disconnect_input();
-      }
+      *input = component::new_input({0, 0});
     }
   $endif
-  $if($defined(self.outputs)):
+  $if ($defined (self.outputs)):
     foreach (&output : self.outputs)
     {
-      if (output.in != null && output.in.parent_id == event.data.id)
-      {
-        output.disconnect_input();
-      }
+      *output = component::new_output({0, 0}, false);
     }
-  $endif;
+  $endif
+  new.pos = pos;
+  new.id = id;
+  return new;
 }
