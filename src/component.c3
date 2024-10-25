@@ -10,7 +10,6 @@ def PointSmall = short[<2>];
 def EventQueue = Queue(<GameEvent>);
 def OpId = char;
 def Id = uint;
-// def Splitter = splitter::Splitter;
 
 macro unimplemented() @builtin
 {
@@ -73,20 +72,6 @@ struct Output
   PointSmall position;
 }
 
-fn void Output.connect_input(&self, Input* input)
-{
-  unimplemented();
-  // self.in = input;
-  // input.out = self;
-}
-
-fn void Output.disconnect_input(&self)
-{
-  unimplemented();
-  // self.in.out = null;
-  // self.in = null;
-}
-
 fn Input new_input(PointSmall pos)
 {
   return {0, 0, pos};
@@ -95,25 +80,6 @@ fn Input new_input(PointSmall pos)
 fn Output new_output(PointSmall pos, bool on)
 {
   return {on, pos};
-}
-
-/* TODO: have some sort of modular component system with generics & interfaces.
- * I would likely need to use macros to automatically generate lists that store every created component then automatically add a reference to them to the world map
- *
- * def AndGate = Component(<NUM_INPUTS, NUM_OUTPUTS, &and_gate_state_calculate_fn>);
-*/
-interface Component
-{
-  fn Point get_pos();
-  fn PointSmall get_size();
-  fn Input[] get_inputs();
-  fn Output[] get_outputs();
-  fn Id get_id();
-
-  fn void set_pos(Point pos);
-  fn void recalculate_state();
-  fn void handle_event(GameEvent* event);
-  fn void draw();
 }
 
 fn void connect(Component* from, OpId output_idx, Component* to, OpId input_idx)
@@ -139,76 +105,99 @@ fn bool output_state(Id component_id, OpId output_idx)
   return logic_gate_simulation::world.get_ref(component_id)!!.get_outputs()[output_idx].on;
 }
 
-module logic_gate_simulation::generic_component(<INPUT_COUNT, OUTPUT_COUNT, WIDTH, HEIGHT>);
-
-import logic_gate_simulation::component;
-
 // Implement recalculate_state, draw, and handle_event manually
+def RecalculateStateFn = fn void (Component*);
+def DrawFn = fn void (Component*);
+def HandleEventFn = fn void (Component*, GameEvent*);
 
-struct GenericComponent (Component)
+struct Component
 {
-  Input[INPUT_COUNT] inputs @if(INPUT_COUNT > 0);
-  Output[OUTPUT_COUNT] outputs @if(OUTPUT_COUNT > 0);
+  Input[] inputs;
+  Output[] outputs;
   Point pos;
+  PointSmall size;
   Id id;
   // Only really used for BULB
-  bool on @if(OUTPUT_COUNT == 0);
+  bool on;
+  RecalculateStateFn recalculate_state_fn;
+  DrawFn draw_fn;
+  HandleEventFn handle_event_fn;
 }
 
-fn Point GenericComponent.get_pos(&self) @dynamic
+
+fn void Component.recalculate_state(&self)
+{
+  self.recalculate_state_fn(self);
+}
+
+fn void Component.handle_event(&self, GameEvent* event)
+{
+  self.handle_event_fn(self, event);
+}
+
+fn void Component.draw(&self)
+{
+  self.draw_fn(self);
+}
+
+fn Point Component.get_pos(&self)
 {
   return self.pos;
 }
 
-fn PointSmall GenericComponent.get_size(&self) @dynamic
+fn PointSmall Component.get_size(&self)
 {
-  return {WIDTH, HEIGHT};
+  return self.size;
 }
 
-fn Input[] GenericComponent.get_inputs(&self) @dynamic
+fn Input[] Component.get_inputs(&self)
 {
-  $if ($defined (self.inputs)):
-    return &self.inputs;
-  $else
-    return {};
-  $endif
+  return self.inputs;
 }
 
-fn Output[] GenericComponent.get_outputs(&self) @dynamic
+fn Output[] Component.get_outputs(&self)
 {
-  $if ($defined (self.outputs)):
-    return &self.outputs;
-  $else
-    return {};
-  $endif
+  return self.outputs;
 }
 
-fn Id GenericComponent.get_id(&self) @dynamic
+fn Id Component.get_id(&self)
 {
   return self.id;
 }
 
-fn void GenericComponent.set_pos(&self, Point pos) @dynamic
+fn void Component.set_pos(&self, Point pos)
 {
   self.pos = pos;
 }
 
-fn GenericComponent GenericComponent.new(self, Point pos, Id id)
+fn void Component.free(&self)
 {
-  GenericComponent new;
-  $if ($defined (self.inputs)):
-    foreach (&input : self.inputs)
-    {
-      *input = component::new_input({0, 0});
-    }
+  if (self.inputs.len != 0)
+  {
+    mem::free(self.inputs);
+  }
+  if (self.outputs.len != 0)
+  {
+    mem::free(self.outputs);
+  }
+}
+
+macro void Component.new_init(&self, Point pos, PointSmall $size, Id id, usz $input_num, usz $output_num, RecalculateStateFn recalculate_state_fn, DrawFn draw_fn, HandleEventFn handle_event_fn)
+{
+  self.pos = pos;
+  self.size = $size;
+  self.id = id;
+  $if ($input_num > 0):
+    self.inputs = mem::new_array(Input, $input_num);
+  $else
+    self.inputs = {};
   $endif
-  $if ($defined (self.outputs)):
-    foreach (&output : self.outputs)
-    {
-      *output = component::new_output({0, 0}, false);
-    }
+  $if ($output_num > 0):
+    self.outputs = mem::new_array(Output, $output_num);
+  $else
+    self.outputs = {};
   $endif
-  new.pos = pos;
-  new.id = id;
-  return new;
+  self.recalculate_state_fn = recalculate_state_fn;
+  self.draw_fn = draw_fn;
+  self.handle_event_fn = handle_event_fn;
 }

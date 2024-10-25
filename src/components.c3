@@ -1,7 +1,6 @@
 module logic_gate_simulation::components;
 
 import logic_gate_simulation::component;
-import logic_gate_simulation::generic_component;
 
 import raylib5;
 
@@ -15,13 +14,19 @@ import std::io;
  *
  *
 */
-def Lever = GenericComponent(<0, 1, 20, 20>);
-fn void Lever.recalculate_state(&self) @dynamic
+fn Component lever(Point pos, Id id)
+{
+  Component new;
+  new.new_init(pos, {20, 20}, id, 0, 1, &lever_recalculate_state, &lever_draw, &lever_handle_event);
+  return new;
+}
+
+fn void lever_recalculate_state(Component* self)
 {
   unimplemented();
 }
 
-fn void Lever.handle_event(&self, GameEvent* event) @dynamic
+fn void lever_handle_event(Component* self, GameEvent* event)
 {
   switch (event.type)
   {
@@ -34,10 +39,11 @@ fn void Lever.handle_event(&self, GameEvent* event) @dynamic
   }
 }
 
-fn void Lever.draw(&self) @dynamic
+fn void lever_draw(Component* self)
 {
   rl::drawRectangle(...self.pos, ...self.get_size(), self.outputs[0].on ? {255, 0, 0, 255} : {150, 0, 0, 255});
 }
+
 
 /*
  *
@@ -46,15 +52,20 @@ fn void Lever.draw(&self) @dynamic
  *
  *
 */
-def Bulb = GenericComponent(<1, 0, 20, 20>);
+fn Component bulb(Point pos, Id id)
+{
+  Component new;
+  new.new_init(pos, {20, 20}, id, 1, 0, &bulb_recalculate_state, &bulb_draw, &bulb_handle_event);
+  return new;
+}
 
-fn void Bulb.recalculate_state(&self) @dynamic
+fn void bulb_recalculate_state(Component* self)
 {
   unimplemented();
 }
 
 
-fn void Bulb.handle_event(&self, GameEvent* event) @dynamic
+fn void bulb_handle_event(Component* self, GameEvent* event)
 {
   switch (event.type)
   {
@@ -74,7 +85,7 @@ fn void Bulb.handle_event(&self, GameEvent* event) @dynamic
 
 }
 
-fn void Bulb.draw(&self) @dynamic
+fn void bulb_draw(Component* self)
 {
   rl::drawRectangle(...self.pos, ...self.get_size(), self.on ? rl::PURPLE : rl::BLACK);
 }
