@@ -1,9 +1,10 @@
 module logic_gate_simulation::component;
 
 import logic_gate_simulation::queue;
+import raylib5;
 
-const PointSmall INPUT_SIZE = {5, 5};
-const PointSmall OUTPUT_SIZE = {5, 5};
+const PointSmall INPUT_SIZE = {4, 4};
+const PointSmall OUTPUT_SIZE = {4, 4};
 
 def Point = int[<2>];
 def PointSmall = short[<2>];
@@ -63,23 +64,87 @@ struct Input
 {
   Id connected_id;
   OpId output_idx;
-  PointSmall position;
+  Anchor anchor;
+}
+
+fn void Input.draw(&self, Component* parent)
+{
+  rl::drawRectangle(...(self.get_pos(parent) - 1), ...INPUT_SIZE + 2, rl::BLACK);
+  rl::drawRectangle(...(self.get_pos(parent)), ...INPUT_SIZE, rl::GREEN);
+}
+
+fn Point Input.get_pos(&self, Component* parent, bool relative = false)
+{
+  return self.anchor.apply_anchor(parent.get_pos(), parent.get_size(), INPUT_SIZE, relative);
 }
 
 struct Output
 {
   bool on;
-  PointSmall position;
+  Anchor anchor;
 }
 
-fn Input new_input(PointSmall pos)
+fn void Output.draw(&self, Component* parent)
 {
-  return {0, 0, pos};
+  rl::drawRectangle(...(self.get_pos(parent) - 1), ...OUTPUT_SIZE + 2, rl::BLACK);
+  rl::drawRectangle(...(self.get_pos(parent)), ...OUTPUT_SIZE, rl::YELLOW);
 }
 
-fn Output new_output(PointSmall pos, bool on)
+fn Point Output.get_pos(&self, Component* parent, bool relative = false)
 {
-  return {on, pos};
+  return self.anchor.apply_anchor(parent.get_pos(), parent.get_size(), OUTPUT_SIZE, relative);
+}
+
+enum Anchor : char
+{
+  TOP_LEFT,
+  TOP_MIDDLE,
+  TOP_RIGHT,
+  CENTER_LEFT,
+  CENTER_RIGHT,
+  BOTTOM_LEFT,
+  BOTTOM_MIDDLE,
+  BOTTOM_RIGHT
+}
+
+macro Point Anchor.apply_anchor(self, Point parent_pos, Point parent_size, Point $size, bool relative = false)
+{
+  Point pos;
+  switch (self)
+  {
+    case TOP_LEFT:
+      pos = parent_pos;
+    case TOP_MIDDLE:
+      pos = {parent_pos.x + parent_size.x / 2 - $size.x / 2, parent_pos.y};
+    case TOP_RIGHT:
+      pos = {parent_pos.x + parent_size.x - $size.x, parent_pos.y};
+    case CENTER_LEFT:
+      pos = {parent_pos.x, parent_pos.y / 2 - $size.y / 2};
+    case CENTER_RIGHT:
+      pos = {parent_pos.x + parent_size.x - $size.x, parent_pos.y / 2 - $size.y / 2};
+    case BOTTOM_LEFT:
+      pos = {parent_pos.x, parent_size.y + parent_pos.y - $size.y};
+    case BOTTOM_MIDDLE:
+      pos = {parent_pos.x + parent_size.x / 2 - $size.x / 2, parent_size.y + parent_pos.y - $size.y};
+    case BOTTOM_RIGHT:
+      pos = {parent_pos.x + parent_size.x - $size.x, parent_size.y + parent_pos.y - $size.y};
+  }
+  if (relative)
+  {
+    pos -= parent_pos;
+  }
+  return pos;
+}
+
+
+fn Input new_input(Anchor anchor)
+{
+  return {0, 0, anchor};
+}
+
+fn Output new_output(Anchor anchor, bool on)
+{
+  return {on, anchor};
 }
 
 fn void connect(Component* from, OpId output_idx, Component* to, OpId input_idx)
@@ -182,21 +247,48 @@ fn void Component.free(&self)
   }
 }
 
-macro void Component.new_init(&self, Point pos, PointSmall $size, Id id, usz $input_num, usz $output_num, RecalculateStateFn recalculate_state_fn, DrawFn draw_fn, HandleEventFn handle_event_fn)
+macro Component.@input_state(&self; @body(bool[] outputs))
+{
+  bool[] input_bools = mem::new_array(bool, self.inputs.len);
+  defer mem::free(input_bools);
+  foreach (i, op : &self.inputs)
+  {
+    if (op.connected_id != 0)
+    {
+      input_bools[i] = logic_gate_simulation::world.get_ref(op.connected_id)!!.get_outputs()[op.output_idx].on;
+    }
+  }
+  @body(input_bools);
+}
+
+macro void Component.new_init(&self, Point pos, PointSmall $size, Id id, usz $input_num, usz $output_num, Anchor[] $input_anchors, Anchor[] $output_anchors, RecalculateStateFn recalculate_state_fn, DrawFn draw_fn, HandleEventFn handle_event_fn)
 {
   self.pos = pos;
   self.size = $size;
   self.id = id;
+
+  usz $idx = 0;
+
   $if ($input_num > 0):
     self.inputs = mem::new_array(Input, $input_num);
+    $for (var $i = 0; $i < $input_num; $i++)
+      self.inputs[$i].anchor = $input_anchors[$i];
+      $idx++;
+    $endfor
   $else
     self.inputs = {};
   $endif
+
   $if ($output_num > 0):
     self.outputs = mem::new_array(Output, $output_num);
+    $for (var $i = 0; $i < $output_num; $i++)
+      self.outputs[$i].anchor = $output_anchors[$i];
+      $idx++;
+    $endfor
   $else
     self.outputs = {};
   $endif
+
   self.recalculate_state_fn = recalculate_state_fn;
   self.draw_fn = draw_fn;
   self.handle_event_fn = handle_event_fn;

@@ -211,26 +211,24 @@ fn int main(String[] args)
     */
     // Mode2D makes drawn things follow the camera
     rl::beginMode2D(camera);
-    foreach (component : world.value_tlist())
+    foreach (&component : world.value_tlist())
     {
       // FIXME: this will not work until there is a way to get the parent id from an output or if an input holds a pointer to the parent component instead of its output bool
-      foreach (input : component.get_inputs())
+      foreach (&input : component.get_inputs())
       {
         if (input.connected_id != 0)
         {
-          draw_between_points(component.get_pos() + (Point)input.position, world.get(input.connected_id)!!.get_pos() + (Point)world.get(input.connected_id)!!.get_outputs()[input.output_idx].position);
+          draw_between_points(input.get_pos(component), world.get_ref(input.connected_id)!!.get_outputs()[input.output_idx].get_pos(world.get_ref(input.connected_id)!!));
         }
       }
       component.draw();
-      foreach (input : component.get_inputs())
+      foreach (&input : component.get_inputs())
       {
-        rl::drawRectangle(...(component.get_pos() + (Point)input.position - 1), ...component::INPUT_SIZE + 2, rl::BLACK);
-        rl::drawRectangle(...(component.get_pos() + (Point)input.position), ...component::INPUT_SIZE, rl::GREEN);
+        input.draw(component);
       }
-      foreach (output : component.get_outputs())
+      foreach (&output : component.get_outputs())
       {
-        rl::drawRectangle(...(component.get_pos() + (Point)output.position - 1), ...component::OUTPUT_SIZE + 2, rl::BLACK);
-        rl::drawRectangle(...(component.get_pos() + (Point)output.position), ...component::OUTPUT_SIZE, rl::YELLOW);
+        output.draw(component);
       }
     }
     if (new_component.id != 0)
@@ -240,7 +238,7 @@ fn int main(String[] args)
     }
     if (new_connection_from.first != 0)
     {
-      draw_between_points(world.get_ref(new_connection_from.first)!!.get_pos() + (Point)world.get_ref(new_connection_from.first)!!.get_outputs()[new_connection_from.second].position, {(int)((mouse_pos.x - camera.offset.x) / camera.zoom), (int)((mouse_pos.y - camera.offset.y) / camera.zoom)});
+      draw_between_points(world.get_ref(new_connection_from.first)!!.get_outputs()[new_connection_from.second].get_pos(world.get_ref(new_connection_from.first)!!), {(int)((mouse_pos.x - camera.offset.x) / camera.zoom), (int)((mouse_pos.y - camera.offset.y) / camera.zoom)});
     }
 
     rl::endMode2D();
@@ -256,7 +254,7 @@ fn int main(String[] args)
     {
       @new_button(0, "lever", show_full_ui, event_queue, new_component);
       @new_button(1, "bulb", show_full_ui, event_queue, new_component);
-      // @new_button(2, "and", show_full_ui, event_queue, new_component);
+      @new_button(2, "and", show_full_ui, event_queue, new_component);
       // @new_button(3, "or", show_full_ui, event_queue, new_component);
       // @new_button(4, "not", show_full_ui, event_queue, new_component);
       // @new_button(5, "nor", show_full_ui, event_queue, new_component);
@@ -326,7 +324,7 @@ fn Tuple(<Id, OpId>)! get_component_input_near_point(Point point, WorldMap* worl
   {
     foreach (OpId id, &input : world.get_ref(result.first)!!.get_inputs())
     {
-      Point diff = result.second - (Point)((float[<2>])input.position * camera.zoom);
+      Point diff = result.second - (Point)((float[<2>])input.get_pos(world.get_ref(result.first)!!, true) * camera.zoom);
       if (diff.comp_ge({0, 0}) == {true, true} && diff.comp_le((Point)((float[<2>])component::INPUT_SIZE * camera.zoom)) == {true, true})
       {
         return {result.first, id};
@@ -343,7 +341,7 @@ fn Tuple(<Id, OpId>)! get_component_output_near_point(Point point, WorldMap* wor
   {
     foreach (OpId id, &output : world.get_ref(result.first)!!.get_outputs())
     {
-      Point diff = result.second - (Point)((float[<2>])output.position * camera.zoom);
+      Point diff = result.second - (Point)((float[<2>])output.get_pos(world.get_ref(result.first)!!, true) * camera.zoom);
       if (diff.comp_ge({0, 0}) == {true, true} && diff.comp_le((Point)((float[<2>])component::OUTPUT_SIZE * camera.zoom)) == {true, true})
       {
         return {result.first, id};
@@ -359,7 +357,7 @@ macro void @new_button(int $idx, String $type, bool* &show_full_ui, EventQueue* 
   {
     *show_full_ui = false;
     Component temp;
-    $if (!$defined($evaltype($type +++ "gate"))):
+    $if (!$defined($eval("components::" +++ $type +++ "gate"))):
       temp = $eval("components::" +++ $type)({0, 0}, ++id_counter);
     $else
       temp = $eval("components::" +++ $type +++ "gate")({0, 0}, ++id_counter);
