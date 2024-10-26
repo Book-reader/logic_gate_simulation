@@ -255,10 +255,11 @@ fn int main(String[] args)
       @new_button(0, "lever", show_full_ui, event_queue, new_component);
       @new_button(1, "bulb", show_full_ui, event_queue, new_component);
       @new_button(2, "and", show_full_ui, event_queue, new_component);
-      // @new_button(3, "or", show_full_ui, event_queue, new_component);
+      @new_button(3, "nand", show_full_ui, event_queue, new_component);
+      @new_button(4, "or", show_full_ui, event_queue, new_component);
       // @new_button(4, "not", show_full_ui, event_queue, new_component);
-      // @new_button(5, "nor", show_full_ui, event_queue, new_component);
-      // @new_button(6, "xor", show_full_ui, event_queue, new_component);
+      @new_button(5, "nor", show_full_ui, event_queue, new_component);
+      @new_button(6, "xor", show_full_ui, event_queue, new_component);
       // @new_button(7, "xnor", show_full_ui, event_queue, new_component);
       // @new_button(8, "splitter", show_full_ui, event_queue, new_component);
       // @new_button(9, "latch", show_full_ui, event_queue, new_component);
@@ -443,7 +444,6 @@ fn int component_thread(void* arg)
         }
         else
         {
-          // TODO: this causes everything to freese for some reason
           world_mutex.lock()!!;
           switch (event.type)
           {

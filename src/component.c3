@@ -34,9 +34,9 @@ fn GameEvent power_change_event(Id source_id)
   return {POWER_STATE_CHANGE, source_id, {}};
 }
 
-fn GameEvent removed_event(Id source_id)
+fn GameEvent removed_event(Id target_id)
 {
-  return {COMPONENT_REMOVED, source_id, {}};
+  return {COMPONENT_REMOVED, 0, {.id = target_id}};
 }
 
 fn GameEvent pressed_event(Id target_id, Point relative_coords)
@@ -292,4 +292,6 @@ macro void Component.new_init(&self, Point pos, PointSmall $size, Id id, usz $in
   self.recalculate_state_fn = recalculate_state_fn;
   self.draw_fn = draw_fn;
   self.handle_event_fn = handle_event_fn;
+
+  self.recalculate_state();
 }
