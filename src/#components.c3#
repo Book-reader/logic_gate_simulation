@@ -64,8 +64,9 @@ fn void bulb_recalculate_state(Component* self)
 {
   self.@input_state(; bool[] inputs)
   {
-    self.on = inputs[0];
+    self.on = inputs[0]
   };
+
 }
 
 
@@ -74,7 +75,6 @@ fn void bulb_handle_event(Component* self, GameEvent* event)
   switch (event.type)
   {
     case POWER_STATE_CHANGE:
-    case COMPONENT_DISCONNECTED:
       self.recalculate_state();
       nextcase;
     default:
@@ -225,7 +225,6 @@ fn void logic_handle_event(Component* self, GameEvent* event)
   switch (event.type)
   {
     case POWER_STATE_CHANGE:
-    case COMPONENT_DISCONNECTED:
       self.recalculate_state();
     default:
       $if (DEBUG):

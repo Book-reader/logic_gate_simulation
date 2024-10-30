@@ -211,6 +211,7 @@ fn int main(String[] args)
     */
     // Mode2D makes drawn things follow the camera
     rl::beginMode2D(camera);
+    world_mutex.lock()!!;
     foreach (&component : world.value_tlist())
     {
       // FIXME: this will not work until there is a way to get the parent id from an output or if an input holds a pointer to the parent component instead of its output bool
@@ -231,6 +232,7 @@ fn int main(String[] args)
         output.draw(component);
       }
     }
+    world_mutex.unlock()!!;
     if (new_component.id != 0)
     {
       new_component.set_pos({(int)((mouse_pos.x - camera.offset.x) / camera.zoom), (int)((mouse_pos.y - camera.offset.y) / camera.zoom)});
@@ -260,7 +262,7 @@ fn int main(String[] args)
       // @new_button(4, "not", show_full_ui, event_queue, new_component);
       @new_button(5, "nor", show_full_ui, event_queue, new_component);
       @new_button(6, "xor", show_full_ui, event_queue, new_component);
-      // @new_button(7, "xnor", show_full_ui, event_queue, new_component);
+      @new_button(7, "xnor", show_full_ui, event_queue, new_component);
       // @new_button(8, "splitter", show_full_ui, event_queue, new_component);
       // @new_button(9, "latch", show_full_ui, event_queue, new_component);
       // @new_button(10, "pulse", show_full_ui, event_queue, new_component);
@@ -417,7 +419,7 @@ fn int component_thread(void* arg)
     // TODO: some sort of automatic free for the event queue when the peak is really high and the curent average is really low
     event_num = event_queue.len();
 
-    for (int i = 0; i < event_num; i++)
+    for (int counter = 0; counter < event_num; counter++)
     {
       GameEvent! event = event_queue.pop();
 
@@ -452,13 +454,24 @@ fn int component_thread(void* arg)
             case COMPONENT_REMOVED:
               recently_removed[recently_removed_idx] = event.data.id;
               recently_removed_idx = (recently_removed_idx + 1) % recently_removed.len;
-              world.remove(event.data.id);
-              nextcase;
-            default:
+              Component* removed_com = world.get_ref(event.data.id)!!;
               foreach (id : world.tcopy_keys())
               {
-                world.get_ref(id)!!.handle_event(&event);
+                Component* com = world.get_ref(id)!!;
+                foreach (OpId i, input : com.get_inputs())
+                {
+                  if (input.connected_id == event.data.id)
+                  {
+                    component::disconnect(removed_com, com, i);
+                  }
+                }
+                // com.handle_event(&&component::component_disconnected_event(event.data.id));
               }
+              world.remove(event.data.id);
+            case COMPONENT_DISCONNECTED:
+              world.get_ref(event.data.id)!!.handle_event(&event);
+            default:
+              unreachable("event %s sent globally", event.type);
           }
           world_mutex.unlock()!!;
         }

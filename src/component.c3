@@ -39,6 +39,11 @@ fn GameEvent removed_event(Id target_id)
   return {COMPONENT_REMOVED, 0, {.id = target_id}};
 }
 
+fn GameEvent component_disconnected_event(Id target_id)
+{
+  return {COMPONENT_DISCONNECTED, 0, {.id = target_id}};
+}
+
 fn GameEvent pressed_event(Id target_id, Point relative_coords)
 {
   return {PRESSED, 0, {.id = target_id, .pos = relative_coords}};
@@ -49,7 +54,7 @@ enum EventType : char
   POWER_STATE_CHANGE,
   COMPONENT_REMOVED,
   // TODO
-  // COMPONENT_CONNECTED,
+  COMPONENT_DISCONNECTED,
   PRESSED
 }
 
@@ -147,22 +152,24 @@ fn Output new_output(Anchor anchor, bool on)
   return {on, anchor};
 }
 
-fn void connect(Component* from, OpId output_idx, Component* to, OpId input_idx)
+fn void connect(Component* emitter, OpId output_idx, Component* listener, OpId input_idx)
 {
   logic_gate_simulation::event_manager_mutex.lock()!!;
-  logic_gate_simulation::event_manager.register(to.get_id(), from.get_id());
+  logic_gate_simulation::event_manager.register(listener.get_id(), emitter.get_id());
   logic_gate_simulation::event_manager_mutex.unlock()!!;
-  to.get_inputs()[input_idx].connected_id = from.get_id();
-  to.get_inputs()[input_idx].output_idx = output_idx;
+  listener.get_inputs()[input_idx].connected_id = emitter.get_id();
+  listener.get_inputs()[input_idx].output_idx = output_idx;
+  logic_gate_simulation::event_queue.push(power_change_event(emitter.get_id()));
 }
 
-fn void disconnect(Component* from, Component* to, OpId input_idx)
+fn void disconnect(Component* emitter, Component* listener, OpId input_idx)
 {
   logic_gate_simulation::event_manager_mutex.lock()!!;
-  logic_gate_simulation::event_manager.deregister(to.get_id(), from.get_id());
+  logic_gate_simulation::event_manager.deregister(listener.get_id(), emitter.get_id());
   logic_gate_simulation::event_manager_mutex.unlock()!!;
-  to.get_inputs()[input_idx].connected_id = 0;
-  to.get_inputs()[input_idx].output_idx = 0;
+  listener.get_inputs()[input_idx].connected_id = 0;
+  logic_gate_simulation::event_queue.push(component_disconnected_event(listener.get_id()));
+  listener.get_inputs()[input_idx].output_idx = 0;
 }
 
 fn bool output_state(Id component_id, OpId output_idx)
@@ -249,8 +256,7 @@ fn void Component.free(&self)
 
 macro Component.@input_state(&self; @body(bool[] outputs))
 {
-  bool[] input_bools = mem::new_array(bool, self.inputs.len);
-  defer mem::free(input_bools);
+  bool[] input_bools = mem::temp_new_array(bool, self.inputs.len);
   foreach (i, op : &self.inputs)
   {
     if (op.connected_id != 0)
