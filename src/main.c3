@@ -455,17 +455,20 @@ fn int component_thread(void* arg)
               recently_removed[recently_removed_idx] = event.data.id;
               recently_removed_idx = (recently_removed_idx + 1) % recently_removed.len;
               Component* removed_com = world.get_ref(event.data.id)!!;
-              foreach (id : world.tcopy_keys())
+              if (try listeners = event_manager.listeners_of(event.data.id))
               {
-                Component* com = world.get_ref(id)!!;
-                foreach (OpId i, input : com.get_inputs())
+                foreach (id : listeners)
                 {
-                  if (input.connected_id == event.data.id)
+                  Component* com = world.get_ref(id)!!;
+                  foreach (OpId i, input : com.get_inputs())
                   {
-                    component::disconnect(removed_com, com, i);
+                    if (input.connected_id == event.data.id)
+                    {
+                      component::disconnect(removed_com, com, i);
+                    }
                   }
+                  // com.handle_event(&&component::component_disconnected_event(event.data.id));
                 }
-                // com.handle_event(&&component::component_disconnected_event(event.data.id));
               }
               world.remove(event.data.id);
             case COMPONENT_DISCONNECTED:
