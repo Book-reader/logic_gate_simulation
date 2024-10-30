@@ -182,8 +182,21 @@ def RecalculateStateFn = fn void (Component*);
 def DrawFn = fn void (Component*);
 def HandleEventFn = fn void (Component*, GameEvent*);
 
+enum ComponentType : char (String builder_name)
+{
+  LEVER = "lever",
+  BULB = "bulb",
+  AND = "andgate",
+  NAND = "nandgate",
+  OR = "orgate",
+  NOR = "norgate",
+  XOR = "xorgate",
+  XNOR = "xnorgate"
+}
+
 struct Component
 {
+  ComponentType type;
   Input[] inputs;
   Output[] outputs;
   Point pos;
@@ -196,6 +209,10 @@ struct Component
   HandleEventFn handle_event_fn;
 }
 
+fn ComponentType Component.get_type(&self)
+{
+  return self.type;
+}
 
 fn void Component.recalculate_state(&self)
 {
@@ -267,8 +284,9 @@ macro Component.@input_state(&self; @body(bool[] outputs))
   @body(input_bools);
 }
 
-macro void Component.new_init(&self, Point pos, PointSmall $size, Id id, usz $input_num, usz $output_num, Anchor[] $input_anchors, Anchor[] $output_anchors, RecalculateStateFn recalculate_state_fn, DrawFn draw_fn, HandleEventFn handle_event_fn)
+macro void Component.new_init(&self, ComponentType type, Point pos, PointSmall $size, Id id, usz $input_num, usz $output_num, Anchor[] $input_anchors, Anchor[] $output_anchors, RecalculateStateFn recalculate_state_fn, DrawFn draw_fn, HandleEventFn handle_event_fn)
 {
+  self.type = type;
   self.pos = pos;
   self.size = $size;
   self.id = id;
@@ -300,4 +318,30 @@ macro void Component.new_init(&self, Point pos, PointSmall $size, Id id, usz $in
   self.handle_event_fn = handle_event_fn;
 
   self.recalculate_state();
+}
+
+// TODO: serialize and deserialize connections
+import logic_gate_simulation::components;
+fn Component deserialize(String data)
+{
+  String[] data_split = data.split(",");
+
+  $foreach ($member : ComponentType.values)
+    if ($member.nameof == data_split[0])
+    {
+      Component new = $eval("components::" +++ $member.builder_name)({data_split[1].to_int()!!, data_split[2].to_int()!!}, data_split[3].to_int()!!);
+      logic_gate_simulation::id_counter = new.get_id();
+      return new;
+    }
+  $endforeach
+  unreachable("Failed to deserialize %s", data);
+}
+
+fn String Component.serialize(&self)
+{
+  DString format;
+  format.new_init();
+  defer format.free();
+  format.appendf("%s,%s,%s,%s", self.type, ...self.pos, self.id);
+  return format.copy_str();
 }

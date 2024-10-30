@@ -17,7 +17,7 @@ const DEBUG = false;
 fn Component lever(Point pos, Id id)
 {
   Component new;
-  new.new_init(pos, {20, 20}, id, 0, 1, {}, {BOTTOM_MIDDLE}, &lever_recalculate_state, &lever_draw, &lever_handle_event);
+  new.new_init(LEVER, pos, {20, 20}, id, 0, 1, {}, {BOTTOM_MIDDLE}, &lever_recalculate_state, &lever_draw, &lever_handle_event);
   return new;
 }
 
@@ -56,7 +56,7 @@ fn void lever_draw(Component* self)
 fn Component bulb(Point pos, Id id)
 {
   Component new;
-  new.new_init(pos, {20, 20}, id, 1, 0, {TOP_MIDDLE}, {}, &bulb_recalculate_state, &bulb_draw, &bulb_handle_event);
+  new.new_init(BULB, pos, {20, 20}, id, 1, 0, {TOP_MIDDLE}, {}, &bulb_recalculate_state, &bulb_draw, &bulb_handle_event);
   return new;
 }
 
@@ -102,42 +102,42 @@ fn void bulb_draw(Component* self)
 fn Component andgate(Point pos, Id id)
 {
   Component new;
-  new.new_init(pos, {20, 20}, id, 2, 1, {TOP_LEFT, TOP_RIGHT}, {BOTTOM_MIDDLE}, &and_recalculate_state, &logic_draw, &logic_handle_event);
+  new.new_init(AND, pos, {20, 20}, id, 2, 1, {TOP_LEFT, TOP_RIGHT}, {BOTTOM_MIDDLE}, &and_recalculate_state, &logic_draw, &logic_handle_event);
   return new;
 }
 
 fn Component nandgate(Point pos, Id id)
 {
   Component new;
-  new.new_init(pos, {20, 20}, id, 2, 1, {TOP_LEFT, TOP_RIGHT}, {BOTTOM_MIDDLE}, &nand_recalculate_state, &logic_draw, &logic_handle_event);
+  new.new_init(NAND, pos, {20, 20}, id, 2, 1, {TOP_LEFT, TOP_RIGHT}, {BOTTOM_MIDDLE}, &nand_recalculate_state, &logic_draw, &logic_handle_event);
   return new;
 }
 
 fn Component orgate(Point pos, Id id)
 {
   Component new;
-  new.new_init(pos, {20, 20}, id, 2, 1, {TOP_LEFT, TOP_RIGHT}, {BOTTOM_MIDDLE}, &or_recalculate_state, &logic_draw, &logic_handle_event);
+  new.new_init(OR, pos, {20, 20}, id, 2, 1, {TOP_LEFT, TOP_RIGHT}, {BOTTOM_MIDDLE}, &or_recalculate_state, &logic_draw, &logic_handle_event);
   return new;
 }
 
 fn Component norgate(Point pos, Id id)
 {
   Component new;
-  new.new_init(pos, {20, 20}, id, 2, 1, {TOP_LEFT, TOP_RIGHT}, {BOTTOM_MIDDLE}, &nor_recalculate_state, &logic_draw, &logic_handle_event);
+  new.new_init(NOR, pos, {20, 20}, id, 2, 1, {TOP_LEFT, TOP_RIGHT}, {BOTTOM_MIDDLE}, &nor_recalculate_state, &logic_draw, &logic_handle_event);
   return new;
 }
 
 fn Component xorgate(Point pos, Id id)
 {
   Component new;
-  new.new_init(pos, {20, 20}, id, 2, 1, {TOP_LEFT, TOP_RIGHT}, {BOTTOM_MIDDLE}, &xor_recalculate_state, &logic_draw, &logic_handle_event);
+  new.new_init(XOR, pos, {20, 20}, id, 2, 1, {TOP_LEFT, TOP_RIGHT}, {BOTTOM_MIDDLE}, &xor_recalculate_state, &logic_draw, &logic_handle_event);
   return new;
 }
 
 fn Component xnorgate(Point pos, Id id)
 {
   Component new;
-  new.new_init(pos, {20, 20}, id, 2, 1, {TOP_LEFT, TOP_RIGHT}, {BOTTOM_MIDDLE}, &xnor_recalculate_state, &logic_draw, &logic_handle_event);
+  new.new_init(XNOR, pos, {20, 20}, id, 2, 1, {TOP_LEFT, TOP_RIGHT}, {BOTTOM_MIDDLE}, &xnor_recalculate_state, &logic_draw, &logic_handle_event);
   return new;
 }
 

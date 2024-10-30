@@ -155,6 +155,8 @@ fn int main(String[] args)
       else if (new_component.id != 0)
       {
         world_mutex.lock()!!;
+        // component::deserialize(new_component.serialize());
+        // world.set(id_counter, new_component);
         world.set(id_counter, new_component);
         world_mutex.unlock()!!;
         new_component = {};
@@ -467,7 +469,6 @@ fn int component_thread(void* arg)
                       component::disconnect(removed_com, com, i);
                     }
                   }
-                  // com.handle_event(&&component::component_disconnected_event(event.data.id));
                 }
               }
               world.remove(event.data.id);
