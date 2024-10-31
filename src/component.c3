@@ -329,7 +329,7 @@ fn Component deserialize(String data)
   $foreach ($member : ComponentType.values)
     if ($member.nameof == data_split[0])
     {
-      Component new = $eval("components::" +++ $member.builder_name)({data_split[1].to_int()!!, data_split[2].to_int()!!}, data_split[3].to_int()!!);
+      Component new = $eval("components::" +++ $member.builder_name)({data_split[1].to_integer($evaltype(PointSmall.inner.nameof))!!, data_split[2].to_integer($evaltype(PointSmall.inner.nameof))!!}, data_split[3].to_integer(Id)!!);
       logic_gate_simulation::id_counter = new.get_id();
       return new;
     }
