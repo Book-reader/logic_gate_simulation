@@ -1,6 +1,7 @@
 module logic_gate_simulation::component;
 
 import logic_gate_simulation::queue;
+import logic_gate_simulation::main;
 import raylib5;
 
 const PointSmall INPUT_SIZE = {4, 4};
@@ -154,27 +155,27 @@ fn Output new_output(Anchor anchor, bool on)
 
 fn void connect(Component* emitter, OpId output_idx, Component* listener, OpId input_idx)
 {
-  logic_gate_simulation::event_manager_mutex.lock()!!;
-  logic_gate_simulation::event_manager.register(listener.get_id(), emitter.get_id());
-  logic_gate_simulation::event_manager_mutex.unlock()!!;
+  main::event_manager_mutex.lock()!!;
+  main::event_manager.register(listener.get_id(), emitter.get_id());
+  main::event_manager_mutex.unlock()!!;
   listener.get_inputs()[input_idx].connected_id = emitter.get_id();
   listener.get_inputs()[input_idx].output_idx = output_idx;
-  logic_gate_simulation::event_queue.push(power_change_event(emitter.get_id()));
+  main::event_queue.push(power_change_event(emitter.get_id()));
 }
 
 fn void disconnect(Component* emitter, Component* listener, OpId input_idx)
 {
-  logic_gate_simulation::event_manager_mutex.lock()!!;
-  logic_gate_simulation::event_manager.deregister(listener.get_id(), emitter.get_id());
-  logic_gate_simulation::event_manager_mutex.unlock()!!;
+  main::event_manager_mutex.lock()!!;
+  main::event_manager.deregister(listener.get_id(), emitter.get_id());
+  main::event_manager_mutex.unlock()!!;
   listener.get_inputs()[input_idx].connected_id = 0;
-  logic_gate_simulation::event_queue.push(component_disconnected_event(listener.get_id()));
+  main::event_queue.push(component_disconnected_event(listener.get_id()));
   listener.get_inputs()[input_idx].output_idx = 0;
 }
 
 fn bool output_state(Id component_id, OpId output_idx)
 {
-  return logic_gate_simulation::world.get_ref(component_id)!!.get_outputs()[output_idx].on;
+  return main::world.get_ref(component_id)!!.get_outputs()[output_idx].on;
 }
 
 // Implement recalculate_state, draw, and handle_event manually
@@ -278,7 +279,7 @@ macro Component.@input_state(&self; @body(bool[] outputs))
   {
     if (op.connected_id != 0)
     {
-      input_bools[i] = logic_gate_simulation::world.get_ref(op.connected_id)!!.get_outputs()[op.output_idx].on;
+      input_bools[i] = main::world.get_ref(op.connected_id)!!.get_outputs()[op.output_idx].on;
     }
   }
   @body(input_bools);
@@ -330,7 +331,7 @@ fn Component deserialize(String data)
     if ($member.nameof == data_split[0])
     {
       Component new = $eval("components::" +++ $member.builder_name)({data_split[1].to_integer($evaltype(PointSmall.inner.nameof))!!, data_split[2].to_integer($evaltype(PointSmall.inner.nameof))!!}, data_split[3].to_integer(Id)!!);
-      logic_gate_simulation::id_counter = new.get_id();
+      main::id_counter = new.get_id();
       return new;
     }
   $endforeach

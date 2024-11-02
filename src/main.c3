@@ -1,9 +1,10 @@
-module logic_gate_simulation;
+module logic_gate_simulation::main;
 
 import raylib5;
 import raygui;
 
 import logic_gate_simulation::component;
+import logic_gate_simulation::components;
 import logic_gate_simulation::event_manager;
 
 import std::io;

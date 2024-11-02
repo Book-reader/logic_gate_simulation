@@ -1,5 +1,6 @@
 module logic_gate_simulation::components;
 
+import logic_gate_simulation::main;
 import logic_gate_simulation::component;
 
 import raylib5;
@@ -30,7 +31,7 @@ fn void lever_handle_event(Component* self, GameEvent* event)
   {
     case PRESSED:
       self.outputs[0].on = !self.outputs[0].on;
-      logic_gate_simulation::event_queue.push(component::power_change_event(self.id));
+      main::event_queue.push(component::power_change_event(self.id));
       nextcase;
     default:
       $if (DEBUG):
@@ -150,7 +151,7 @@ fn void and_recalculate_state(Component* self)
     self.outputs[0].on = inputs[0] && inputs[1];
     if (old != self.outputs[0].on)
     {
-      logic_gate_simulation::event_queue.push(component::power_change_event(self.id));
+      main::event_queue.push(component::power_change_event(self.id));
     }
   };
 }
@@ -163,7 +164,7 @@ fn void nand_recalculate_state(Component* self)
     self.outputs[0].on = !(inputs[0] && inputs[1]);
     if (old != self.outputs[0].on)
     {
-      logic_gate_simulation::event_queue.push(component::power_change_event(self.id));
+      main::event_queue.push(component::power_change_event(self.id));
     }
   };
 }
@@ -176,7 +177,7 @@ fn void or_recalculate_state(Component* self)
     self.outputs[0].on = inputs[0] || inputs[1];
     if (old != self.outputs[0].on)
     {
-      logic_gate_simulation::event_queue.push(component::power_change_event(self.id));
+      main::event_queue.push(component::power_change_event(self.id));
     }
   };
 }
@@ -189,7 +190,7 @@ fn void nor_recalculate_state(Component* self)
     self.outputs[0].on = !(inputs[0] || inputs[1]);
     if (old != self.outputs[0].on)
     {
-      logic_gate_simulation::event_queue.push(component::power_change_event(self.id));
+      main::event_queue.push(component::power_change_event(self.id));
     }
   };
 }
@@ -202,7 +203,7 @@ fn void xor_recalculate_state(Component* self)
     self.outputs[0].on = (inputs[0] && !inputs[1]) || (!inputs[0] && inputs[1]);
     if (old != self.outputs[0].on)
     {
-      logic_gate_simulation::event_queue.push(component::power_change_event(self.id));
+      main::event_queue.push(component::power_change_event(self.id));
     }
   };
 }
@@ -215,7 +216,7 @@ fn void xnor_recalculate_state(Component* self)
     self.outputs[0].on = !((inputs[0] && !inputs[1]) || (!inputs[0] && inputs[1]));
     if (old != self.outputs[0].on)
     {
-      logic_gate_simulation::event_queue.push(component::power_change_event(self.id));
+      main::event_queue.push(component::power_change_event(self.id));
     }
   };
 }
